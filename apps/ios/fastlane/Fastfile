@@ -1,0 +1,112 @@
+default_platform(:ios)
+
+XCODEPROJ = "iosApp.xcodeproj"
+SCHEME = "iOS"
+CONFIGURATION = "Release"
+OUTPUT_DIR = "build"
+OUTPUT_NAME = "HIITTimer.ipa"
+
+platform :ios do
+  before_all do
+    setup_ci if ENV["CI"]
+  end
+
+  desc "Build a release ipa and upload to TestFlight"
+  lane :beta do
+    team_id = ENV.fetch("APPLE_TEAM_ID")
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_P8_BASE64"),
+      is_key_content_base64: true,
+      duration: 1200,
+      in_house: false,
+    )
+
+    build_number = ENV["GITHUB_RUN_NUMBER"] || Time.now.strftime("%Y%m%d%H%M")
+    marketing_version = read_marketing_version || "1.0"
+
+    increment_build_number(
+      xcodeproj: XCODEPROJ,
+      build_number: build_number,
+    )
+
+    build_app(
+      project: XCODEPROJ,
+      scheme: SCHEME,
+      configuration: CONFIGURATION,
+      export_method: "app-store",
+      output_directory: OUTPUT_DIR,
+      output_name: OUTPUT_NAME,
+      clean: true,
+      silent: false,
+      xcargs: [
+        "-allowProvisioningUpdates",
+        "DEVELOPMENT_TEAM=#{team_id}",
+        "CODE_SIGN_STYLE=Automatic",
+      ].join(" "),
+      export_options: {
+        method: "app-store",
+        signingStyle: "automatic",
+        teamID: team_id,
+      },
+    )
+
+    changelog = build_changelog(build_number, marketing_version)
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: File.join(OUTPUT_DIR, OUTPUT_NAME),
+      skip_waiting_for_build_processing: true,
+      changelog: changelog,
+      distribute_external: false,
+    )
+  end
+
+  desc "Local-only: build without uploading (smoke-test the Fastfile)"
+  lane :build_only do
+    build_number = ENV["GITHUB_RUN_NUMBER"] || Time.now.strftime("%Y%m%d%H%M")
+    increment_build_number(
+      xcodeproj: XCODEPROJ,
+      build_number: build_number,
+    )
+    build_app(
+      project: XCODEPROJ,
+      scheme: SCHEME,
+      configuration: CONFIGURATION,
+      export_method: "app-store",
+      output_directory: OUTPUT_DIR,
+      output_name: OUTPUT_NAME,
+      skip_package_ipa: true,
+      clean: true,
+    )
+  end
+end
+
+def read_marketing_version
+  xcconfig = File.expand_path("../Configuration/Config.xcconfig", __dir__)
+  return nil unless File.exist?(xcconfig)
+  File.foreach(xcconfig) do |line|
+    if (m = line.match(/^MARKETING_VERSION\s*=\s*(\S+)/))
+      return m[1]
+    end
+  end
+  nil
+end
+
+def build_changelog(build_number, marketing_version)
+  custom = ENV["TESTFLIGHT_CHANGELOG"]
+  return custom unless custom.nil? || custom.strip.empty?
+
+  ref = ENV["GITHUB_REF_NAME"] || `git rev-parse --abbrev-ref HEAD 2>/dev/null`.strip
+  subject = `git log -1 --pretty=%s 2>/dev/null`.strip
+  sha_short = (ENV["GITHUB_SHA"] || `git rev-parse HEAD 2>/dev/null`.strip)[0, 7]
+
+  [
+    "v#{marketing_version} (#{build_number})",
+    ref.empty? ? nil : "branch: #{ref}",
+    sha_short.empty? ? nil : "commit: #{sha_short}",
+    subject.empty? ? nil : subject,
+  ].compact.join("\n")
+end
