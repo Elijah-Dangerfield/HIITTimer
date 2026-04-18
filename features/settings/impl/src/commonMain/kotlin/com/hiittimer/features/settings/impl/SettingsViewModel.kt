@@ -46,6 +46,14 @@ class SettingsViewModel(
                 )
             }
             is SettingsAction.SetSoundMode -> preferences.set(SoundModePref, action.mode.name)
+            SettingsAction.CycleSoundMode -> {
+                val next = when (state.soundMode) {
+                    SoundMode.Off -> SoundMode.Beeps
+                    SoundMode.Beeps -> SoundMode.Voice
+                    SoundMode.Voice -> SoundMode.Off
+                }
+                preferences.set(SoundModePref, next.name)
+            }
             is SettingsAction.SetHalfwayCallouts -> preferences.set(HalfwayCalloutsPref, action.enabled)
             is SettingsAction.SetShowProgressBar -> preferences.set(ShowProgressBarPref, action.enabled)
             SettingsAction.RateApp -> requestReview.invoke()
@@ -77,6 +85,7 @@ sealed interface SettingsEvent {
 sealed interface SettingsAction {
     data class Receive(val snapshot: SettingsSnapshot) : SettingsAction
     data class SetSoundMode(val mode: SoundMode) : SettingsAction
+    data object CycleSoundMode : SettingsAction
     data class SetHalfwayCallouts(val enabled: Boolean) : SettingsAction
     data class SetShowProgressBar(val enabled: Boolean) : SettingsAction
     data object RateApp : SettingsAction

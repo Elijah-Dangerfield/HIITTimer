@@ -1,9 +1,6 @@
 package com.dangerfield.hiittimer.features.settings.impl
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,7 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,12 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dangerfield.hiittimer.features.timers.SoundMode
-import com.dangerfield.hiittimer.libraries.ui.components.Card
 import com.dangerfield.hiittimer.libraries.ui.components.HorizontalDivider
+import com.dangerfield.hiittimer.libraries.ui.components.ListItemAccessory
+import com.dangerfield.hiittimer.libraries.ui.components.ListSection
+import com.dangerfield.hiittimer.libraries.ui.components.ListSectionItem
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
-import com.dangerfield.hiittimer.libraries.ui.components.Switch
 import com.dangerfield.hiittimer.libraries.ui.components.icon.Icon
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton
+import com.dangerfield.hiittimer.libraries.ui.components.icon.IconResource
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconSize
 import com.dangerfield.hiittimer.libraries.ui.components.icon.Icons
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
@@ -45,65 +45,98 @@ fun SettingsScreen(
         }
     }
 
+    val scroll = rememberScrollState()
+
     Screen(modifier = Modifier.fillMaxSize()) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Header(onBack = onBack)
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = Dimension.D700,
-                    end = Dimension.D700,
-                    top = Dimension.D500,
-                    bottom = Dimension.D1500,
-                ),
-                verticalArrangement = Arrangement.spacedBy(Dimension.D500),
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scroll)
+                    .padding(horizontal = Dimension.D700),
             ) {
-                item { SectionLabel("Audio") }
-                item {
-                    SoundModeCard(
-                        current = state.soundMode,
-                        onChange = { viewModel.takeAction(SettingsAction.SetSoundMode(it)) },
+                Spacer(modifier = Modifier.height(Dimension.D900))
+
+                ListSection(
+                    title = "Audio",
+                    items = listOf(
+                        ListSectionItem(
+                            headlineText = "Sound",
+                            supportingText = soundModeSubtitle(state.soundMode),
+                            leadingContent = { SettingsIcon(Icons.VolumeUp("Sound")) },
+                            accessory = ListItemAccessory.Text(state.soundMode.displayName()),
+                            onClick = { viewModel.takeAction(SettingsAction.CycleSoundMode) },
+                        ),
+                        ListSectionItem(
+                            headlineText = "Halfway callouts",
+                            supportingText = "Cue at the midpoint of each block.",
+                            leadingContent = { SettingsIcon(Icons.Dot("Halfway")) },
+                            accessory = ListItemAccessory.Switch(
+                                checked = state.halfwayCallouts,
+                                onCheckedChange = {
+                                    viewModel.takeAction(SettingsAction.SetHalfwayCallouts(it))
+                                },
+                            ),
+                            onClick = null,
+                        ),
                     )
-                }
-                item {
-                    ToggleCard(
-                        title = "Halfway callouts",
-                        subtitle = "Play a cue at the midpoint of each block",
-                        checked = state.halfwayCallouts,
-                        onChange = { viewModel.takeAction(SettingsAction.SetHalfwayCallouts(it)) },
+                )
+
+                Spacer(modifier = Modifier.height(Dimension.D1000))
+
+                ListSection(
+                    title = "Runner",
+                    items = listOf(
+                        ListSectionItem(
+                            headlineText = "Show progress bar",
+                            supportingText = "Total workout progress while running.",
+                            leadingContent = { SettingsIcon(Icons.Chart("Progress bar")) },
+                            accessory = ListItemAccessory.Switch(
+                                checked = state.showProgressBar,
+                                onCheckedChange = {
+                                    viewModel.takeAction(SettingsAction.SetShowProgressBar(it))
+                                },
+                            ),
+                            onClick = null,
+                        ),
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(Dimension.D1000))
+
+                ListSection(
+                    title = "Support",
+                    items = listOf(
+                        ListSectionItem(
+                            headlineText = "Rate the app",
+                            leadingContent = { SettingsIcon(Icons.ThumbsUp("Rate")) },
+                            onClick = { viewModel.takeAction(SettingsAction.RateApp) },
+                        ),
+                        ListSectionItem(
+                            headlineText = "Tip jar",
+                            supportingText = "Buy me a coffee.",
+                            leadingContent = { SettingsIcon(Icons.TipJar("Tip jar")) },
+                            onClick = { viewModel.takeAction(SettingsAction.OpenTipJar) },
+                        ),
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(Dimension.D1500))
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = "HIIT Timer",
+                        typography = AppTheme.typography.Body.B400,
+                        color = AppTheme.colors.textSecondary,
                     )
                 }
 
-                item { Spacer(modifier = Modifier.height(Dimension.D500)) }
-                item { SectionLabel("Runner") }
-                item {
-                    ToggleCard(
-                        title = "Show progress bar",
-                        subtitle = "Total workout progress on the runner screen",
-                        checked = state.showProgressBar,
-                        onChange = { viewModel.takeAction(SettingsAction.SetShowProgressBar(it)) },
-                    )
-                }
-
-                item { Spacer(modifier = Modifier.height(Dimension.D500)) }
-                item { SectionLabel("Support") }
-                item {
-                    ActionCard(
-                        title = "Rate the app",
-                        subtitle = "If you're enjoying it, a rating helps a lot.",
-                        icon = Icons.ThumbsUp("Rate"),
-                        onClick = { viewModel.takeAction(SettingsAction.RateApp) },
-                    )
-                }
-                item {
-                    ActionCard(
-                        title = "Tip jar",
-                        subtitle = "Buy me a coffee",
-                        icon = Icons.TipJar("Tip jar"),
-                        onClick = { viewModel.takeAction(SettingsAction.OpenTipJar) },
-                    )
-                }
+                Spacer(modifier = Modifier.height(Dimension.D1500))
             }
         }
     }
@@ -114,137 +147,33 @@ private fun Header(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Dimension.D500, vertical = Dimension.D500),
+            .padding(horizontal = Dimension.D400, vertical = Dimension.D400),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(icon = Icons.ArrowBack("Back"), onClick = onBack)
         Spacer(modifier = Modifier.size(Dimension.D300))
-        Text(text = "Settings", typography = AppTheme.typography.Heading.H700)
+        Text(text = "Settings", typography = AppTheme.typography.Heading.H800)
     }
     HorizontalDivider()
 }
 
 @Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        typography = AppTheme.typography.Label.L400,
-        color = AppTheme.colors.textSecondary,
+private fun SettingsIcon(icon: IconResource) {
+    Icon(
+        icon = icon,
+        color = AppTheme.colors.onSurfacePrimary,
+        size = IconSize.Small,
     )
 }
 
-@Composable
-private fun SoundModeCard(current: SoundMode, onChange: (SoundMode) -> Unit) {
-    Card(
-        color = AppTheme.colors.surfacePrimary,
-        contentColor = AppTheme.colors.onSurfacePrimary,
-    ) {
-        Column {
-            Text(text = "Sound", typography = AppTheme.typography.Body.B500)
-            Spacer(modifier = Modifier.height(Dimension.D500))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Dimension.D300),
-            ) {
-                SoundMode.entries.forEach { mode ->
-                    SoundModeChip(
-                        mode = mode,
-                        selected = mode == current,
-                        onClick = { onChange(mode) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
-    }
+private fun SoundMode.displayName(): String = when (this) {
+    SoundMode.Off -> "Off"
+    SoundMode.Beeps -> "Beeps"
+    SoundMode.Voice -> "Voice"
 }
 
-@Composable
-private fun SoundModeChip(
-    mode: SoundMode,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier,
-) {
-    val containerColor = if (selected) AppTheme.colors.accentPrimary else AppTheme.colors.surfaceSecondary
-    val textColor = if (selected) AppTheme.colors.onAccentPrimary else AppTheme.colors.onSurfaceSecondary
-    Card(
-        modifier = modifier,
-        onClick = onClick,
-        color = containerColor,
-        contentColor = textColor,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = mode.name,
-                typography = AppTheme.typography.Label.L500,
-                color = textColor,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ToggleCard(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onChange: (Boolean) -> Unit,
-) {
-    Card(
-        onClick = { onChange(!checked) },
-        color = AppTheme.colors.surfacePrimary,
-        contentColor = AppTheme.colors.onSurfacePrimary,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, typography = AppTheme.typography.Body.B500)
-                Text(
-                    text = subtitle,
-                    typography = AppTheme.typography.Body.B400,
-                    color = AppTheme.colors.textSecondary,
-                )
-            }
-            Spacer(modifier = Modifier.size(Dimension.D500))
-            Switch(checked = checked, onCheckedChange = { onChange(it) })
-        }
-    }
-}
-
-@Composable
-private fun ActionCard(
-    title: String,
-    subtitle: String,
-    icon: com.dangerfield.hiittimer.libraries.ui.components.icon.IconResource,
-    onClick: () -> Unit,
-) {
-    Card(
-        onClick = onClick,
-        color = AppTheme.colors.surfacePrimary,
-        contentColor = AppTheme.colors.onSurfacePrimary,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(icon = icon, size = IconSize.Medium, color = AppTheme.colors.accentPrimary)
-            Spacer(modifier = Modifier.size(Dimension.D500))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, typography = AppTheme.typography.Body.B500)
-                Text(
-                    text = subtitle,
-                    typography = AppTheme.typography.Body.B400,
-                    color = AppTheme.colors.textSecondary,
-                )
-            }
-            Icon(icon = Icons.ChevronRight("Open"), size = IconSize.Small)
-        }
-    }
+private fun soundModeSubtitle(mode: SoundMode): String = when (mode) {
+    SoundMode.Off -> "No sound during workout."
+    SoundMode.Beeps -> "Short tones on transitions and countdown."
+    SoundMode.Voice -> "Spoken block names and countdown."
 }

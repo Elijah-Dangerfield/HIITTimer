@@ -6,8 +6,6 @@ import com.dangerfield.hiittimer.features.timers.Timer
 import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
 import com.dangerfield.hiittimer.features.timers.impl.TimerRepository
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
@@ -19,8 +17,6 @@ class TimerBuilderViewModel(
     private val repository: TimerRepository,
     @Assisted private val timerId: String,
 ) : SEAViewModel<TimerBuilderState, TimerBuilderEvent, TimerBuilderAction>(initialStateArg = TimerBuilderState()) {
-
-    private var renameJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -43,7 +39,10 @@ class TimerBuilderViewModel(
             }
             is TimerBuilderAction.RenameTimer -> {
                 action.updateState { it.copy(nameField = action.name) }
-                debouncePersistName(action.name)
+                val current = state.timer ?: return
+                if (current.name != action.name) {
+                    repository.updateTimer(current.copy(name = action.name))
+                }
             }
             is TimerBuilderAction.ChangeCycleCount -> {
                 val current = state.timer ?: return
@@ -67,36 +66,6 @@ class TimerBuilderViewModel(
             TimerBuilderAction.Start -> sendEvent(TimerBuilderEvent.Start(timerId))
             is TimerBuilderAction.Reorder -> repository.reorderBlocks(timerId, action.orderedIds)
         }
-    }
-
-    private fun debouncePersistName(name: String) {
-        renameJob?.cancel()
-        renameJob = viewModelScope.launch {
-            delay(RENAME_DEBOUNCE_MS)
-            val current = state.timer ?: return@launch
-            if (current.name != name) {
-                repository.updateTimer(current.copy(name = name))
-            }
-        }
-    }
-
-    override fun onCleared() {
-        renameJob?.cancel()
-        val pendingName = state.nameField
-        val loadedName = state.timer?.name
-        if (pendingName.isNotEmpty() && pendingName != loadedName) {
-            val current = state.timer
-            if (current != null) {
-                runCatching {
-                    viewModelScope.launch { repository.updateTimer(current.copy(name = pendingName)) }
-                }
-            }
-        }
-        super.onCleared()
-    }
-
-    companion object {
-        private const val RENAME_DEBOUNCE_MS = 400L
     }
 }
 

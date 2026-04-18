@@ -7,6 +7,9 @@ import kotlinx.serialization.Serializable
 class TimerListRoute : Route()
 
 @Serializable
+data class TimerDetailRoute(val timerId: String) : Route()
+
+@Serializable
 data class TimerBuilderRoute(val timerId: String? = null) : Route()
 
 @Serializable

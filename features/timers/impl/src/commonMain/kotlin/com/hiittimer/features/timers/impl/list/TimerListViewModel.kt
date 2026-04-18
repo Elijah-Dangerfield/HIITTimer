@@ -22,16 +22,15 @@ class TimerListViewModel(
 
     override suspend fun handleAction(action: TimerListAction) {
         when (action) {
-            is TimerListAction.Receive -> action.updateState { it.copy(timers = action.timers, loading = false) }
+            is TimerListAction.Receive -> action.updateState {
+                it.copy(timers = action.timers, loading = false)
+            }
             TimerListAction.CreateNew -> {
                 val timer = repository.create(name = "New Timer")
-                sendEvent(TimerListEvent.OpenBuilder(timer.id))
+                sendEvent(TimerListEvent.OpenDetail(timer.id))
             }
-            is TimerListAction.Duplicate -> repository.duplicate(action.timerId)
-            is TimerListAction.Delete -> repository.delete(action.timerId)
+            is TimerListAction.Open -> sendEvent(TimerListEvent.OpenDetail(action.timerId))
             TimerListAction.OpenSettings -> sendEvent(TimerListEvent.OpenSettings)
-            is TimerListAction.Open -> sendEvent(TimerListEvent.OpenRunner(action.timerId))
-            is TimerListAction.Edit -> sendEvent(TimerListEvent.OpenBuilder(action.timerId))
         }
     }
 }
@@ -42,17 +41,13 @@ data class TimerListState(
 )
 
 sealed interface TimerListEvent {
-    data class OpenBuilder(val timerId: String) : TimerListEvent
-    data class OpenRunner(val timerId: String) : TimerListEvent
+    data class OpenDetail(val timerId: String) : TimerListEvent
     data object OpenSettings : TimerListEvent
 }
 
 sealed interface TimerListAction {
     data class Receive(val timers: List<Timer>) : TimerListAction
     data object CreateNew : TimerListAction
-    data class Duplicate(val timerId: String) : TimerListAction
-    data class Delete(val timerId: String) : TimerListAction
-    data object OpenSettings : TimerListAction
     data class Open(val timerId: String) : TimerListAction
-    data class Edit(val timerId: String) : TimerListAction
+    data object OpenSettings : TimerListAction
 }

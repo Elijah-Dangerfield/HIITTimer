@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,15 +29,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
 import com.dangerfield.hiittimer.libraries.ui.components.HorizontalDivider
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonDanger
-import com.dangerfield.hiittimer.libraries.ui.components.icon.CircleIcon
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton
-import com.dangerfield.hiittimer.libraries.ui.components.icon.IconSize
 import com.dangerfield.hiittimer.libraries.ui.components.icon.Icons
 import com.dangerfield.hiittimer.libraries.ui.components.text.OutlinedTextField
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
@@ -80,7 +79,7 @@ fun BlockEditScreen(
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.Words,
                     ),
-                    typographyToken = AppTheme.typography.Heading.H600,
+                    typographyToken = AppTheme.typography.Heading.H700,
                 )
 
                 Spacer(modifier = Modifier.height(Dimension.D1500))
@@ -92,11 +91,9 @@ fun BlockEditScreen(
 
                 Spacer(modifier = Modifier.height(Dimension.D900))
 
-                AdjustRow(
-                    onAdjust = { viewModel.takeAction(BlockEditAction.AdjustSeconds(it)) },
-                )
+                AdjustRow(onAdjust = { viewModel.takeAction(BlockEditAction.AdjustSeconds(it)) })
 
-                Spacer(modifier = Modifier.height(Dimension.D1300))
+                Spacer(modifier = Modifier.height(Dimension.D1200))
 
                 Text(
                     text = "COLOR",
@@ -104,7 +101,7 @@ fun BlockEditScreen(
                     color = AppTheme.colors.textSecondary,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(Dimension.D500))
+                Spacer(modifier = Modifier.height(Dimension.D400))
                 ColorStrip(
                     selectedArgb = block.colorArgb,
                     onSelect = { viewModel.takeAction(BlockEditAction.SetColor(it)) },
@@ -128,13 +125,13 @@ private fun Header(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Dimension.D500, vertical = Dimension.D500),
+            .padding(horizontal = Dimension.D400, vertical = Dimension.D400),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(icon = Icons.ArrowBack("Back"), onClick = onBack)
         Spacer(modifier = Modifier.weight(1f))
         Text(
-            text = "Edit Block",
+            text = "Edit block",
             typography = AppTheme.typography.Label.L500,
             color = AppTheme.colors.textSecondary,
         )
@@ -148,14 +145,14 @@ private fun Header(onBack: () -> Unit) {
 private fun DurationDisplay(seconds: Int, color: Color) {
     Box(
         modifier = Modifier
-            .size(240.dp)
+            .size(220.dp)
             .clip(CircleShape)
             .background(color),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = formatDuration(seconds),
-            typography = AppTheme.typography.Display.D1500,
+            typography = AppTheme.typography.Display.D1300,
             color = ColorResource.FromColor(ColorPalette.onColorFor(color.toArgb()), "duration"),
         )
     }
@@ -173,7 +170,7 @@ private fun Color.toArgb(): Int {
 private fun AdjustRow(onAdjust: (Int) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Dimension.D500),
+        horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
     ) {
         AdjustTile(label = "−10s", modifier = Modifier.weight(1f), onClick = { onAdjust(-10) })
         AdjustTile(label = "−1s", modifier = Modifier.weight(1f), onClick = { onAdjust(-1) })
@@ -186,15 +183,15 @@ private fun AdjustRow(onAdjust: (Int) -> Unit) {
 private fun AdjustTile(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .height(56.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .height(52.dp)
+            .clip(RoundedCornerShape(10.dp))
             .background(AppTheme.colors.surfaceSecondary.color)
             .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
-            typography = AppTheme.typography.Label.L600,
+            typography = AppTheme.typography.Label.L500,
             color = AppTheme.colors.onSurfaceSecondary,
         )
     }
@@ -203,7 +200,7 @@ private fun AdjustTile(label: String, onClick: () -> Unit, modifier: Modifier = 
 @Composable
 private fun ColorStrip(selectedArgb: Int, onSelect: (Int) -> Unit) {
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(Dimension.D500),
+        horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
         modifier = Modifier.fillMaxWidth(),
     ) {
         items(ColorPalette.swatches) { swatch ->
@@ -211,7 +208,7 @@ private fun ColorStrip(selectedArgb: Int, onSelect: (Int) -> Unit) {
             val selected = selectedArgb == argb
             Box(
                 modifier = Modifier
-                    .size(if (selected) 48.dp else 40.dp)
+                    .size(if (selected) 44.dp else 36.dp)
                     .clip(CircleShape)
                     .background(Color(argb))
                     .border(

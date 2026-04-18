@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.dangerfield.hiittimer.features.timers.impl.list
 
 import androidx.compose.foundation.background
@@ -13,7 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,8 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dangerfield.hiittimer.features.timers.Block
 import com.dangerfield.hiittimer.features.timers.Timer
-import com.dangerfield.hiittimer.libraries.ui.components.Card
 import com.dangerfield.hiittimer.libraries.ui.components.HorizontalDivider
+import com.dangerfield.hiittimer.libraries.ui.components.ListItem
+import com.dangerfield.hiittimer.libraries.ui.components.ListItemAccessory
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
 import com.dangerfield.hiittimer.libraries.ui.components.icon.CircleIcon
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton
@@ -41,8 +44,7 @@ import com.dangerfield.hiittimer.system.Dimension
 @Composable
 fun TimerListScreen(
     viewModel: TimerListViewModel,
-    onOpenRunner: (String) -> Unit,
-    onOpenBuilder: (String) -> Unit,
+    onOpenDetail: (String) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
@@ -50,8 +52,7 @@ fun TimerListScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collect { event ->
             when (event) {
-                is TimerListEvent.OpenBuilder -> onOpenBuilder(event.timerId)
-                is TimerListEvent.OpenRunner -> onOpenRunner(event.timerId)
+                is TimerListEvent.OpenDetail -> onOpenDetail(event.timerId)
                 TimerListEvent.OpenSettings -> onOpenSettings()
             }
         }
@@ -61,6 +62,7 @@ fun TimerListScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Header(
                 onOpenSettings = { viewModel.takeAction(TimerListAction.OpenSettings) },
+                onCreate = { viewModel.takeAction(TimerListAction.CreateNew) },
             )
 
             if (state.timers.isEmpty() && !state.loading) {
@@ -69,20 +71,18 @@ fun TimerListScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        start = Dimension.D700,
-                        end = Dimension.D700,
                         top = Dimension.D500,
                         bottom = Dimension.D1800,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(Dimension.D500),
                 ) {
-                    items(state.timers, key = { it.id }) { timer ->
+                    itemsIndexed(
+                        items = state.timers,
+                        key = { _, item -> item.id },
+                    ) { index, timer ->
                         TimerRow(
                             timer = timer,
-                            onRun = { viewModel.takeAction(TimerListAction.Open(timer.id)) },
-                            onEdit = { viewModel.takeAction(TimerListAction.Edit(timer.id)) },
-                            onDuplicate = { viewModel.takeAction(TimerListAction.Duplicate(timer.id)) },
-                            onDelete = { viewModel.takeAction(TimerListAction.Delete(timer.id)) },
+                            onTap = { viewModel.takeAction(TimerListAction.Open(timer.id)) },
+                            showDivider = index != state.timers.lastIndex,
                         )
                     }
                 }
@@ -92,7 +92,7 @@ fun TimerListScreen(
 }
 
 @Composable
-private fun Header(onOpenSettings: () -> Unit) {
+private fun Header(onOpenSettings: () -> Unit, onCreate: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -101,20 +101,21 @@ private fun Header(onOpenSettings: () -> Unit) {
     ) {
         Text(
             text = "Timers",
-            typography = AppTheme.typography.Heading.H800,
+            typography = AppTheme.typography.Heading.H900,
             modifier = Modifier.weight(1f),
         )
-        IconButton(
-            icon = Icons.Settings("Settings"),
-            onClick = onOpenSettings,
-        )
+        IconButton(icon = Icons.Settings("Settings"), onClick = onOpenSettings)
+        IconButton(icon = Icons.Add("New timer"), onClick = onCreate)
     }
     HorizontalDivider()
 }
 
 @Composable
 private fun EmptyState(onCreate: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize().padding(Dimension.D1200), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.fillMaxSize().padding(Dimension.D1200),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "No timers yet",
@@ -142,82 +143,48 @@ private fun EmptyState(onCreate: () -> Unit) {
 }
 
 @Composable
-private fun TimerRow(
-    timer: Timer,
-    onRun: () -> Unit,
-    onEdit: () -> Unit,
-    onDuplicate: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    Card(
-        onClick = onEdit,
-        color = AppTheme.colors.surfacePrimary,
-        contentColor = AppTheme.colors.onSurfacePrimary,
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = timer.name.ifBlank { "Untitled" },
-                        typography = AppTheme.typography.Heading.H600,
-                        maxLines = 1,
-                    )
-                    Spacer(modifier = Modifier.height(Dimension.D200))
-                    Text(
-                        text = timer.subtitle(),
-                        typography = AppTheme.typography.Body.B400,
-                        color = AppTheme.colors.textSecondary,
-                    )
-                }
-                CircleIcon(
-                    icon = Icons.Play("Start timer"),
-                    iconSize = IconSize.Medium,
-                    padding = Dimension.D500,
-                    backgroundColor = AppTheme.colors.accentPrimary,
-                    contentColor = AppTheme.colors.onAccentPrimary,
-                    onClick = onRun,
-                )
-            }
-            if (timer.blocks.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(Dimension.D500))
-                BlockPreviewStrip(timer.blocks)
-            }
-            Spacer(modifier = Modifier.height(Dimension.D300))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                IconButton(
-                    icon = Icons.Copy("Duplicate"),
-                    onClick = onDuplicate,
-                    size = com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton.Size.Small,
-                )
-                IconButton(
-                    icon = Icons.Delete("Delete"),
-                    onClick = onDelete,
-                    size = com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton.Size.Small,
-                )
-            }
-        }
-    }
+private fun TimerRow(timer: Timer, onTap: () -> Unit, showDivider: Boolean) {
+    ListItem(
+        onClick = onTap,
+        leadingContent = { BlockDotCluster(timer.blocks) },
+        headlineContent = {
+            Text(
+                text = timer.name.ifBlank { "Untitled" },
+                typography = AppTheme.typography.Body.B700.SemiBold,
+                maxLines = 1,
+            )
+        },
+        supportingContent = {
+            Text(
+                text = timer.subtitle(),
+                typography = AppTheme.typography.Body.B400,
+            )
+        },
+        accessory = ListItemAccessory.Chevron,
+        showDivider = showDivider,
+        contentPadding = PaddingValues(
+            horizontal = Dimension.D700,
+            vertical = Dimension.D500,
+        ),
+    )
 }
 
 @Composable
-private fun BlockPreviewStrip(blocks: List<Block>) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(6.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        val totalSeconds = blocks.sumOf { it.duration.inWholeSeconds.toInt() }.coerceAtLeast(1)
-        blocks.forEach { block ->
-            val weight = block.duration.inWholeSeconds.toFloat() / totalSeconds.toFloat()
+private fun BlockDotCluster(blocks: List<Block>) {
+    if (blocks.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .size(Dimension.D1000)
+                .clip(CircleShape)
+                .background(AppTheme.colors.surfaceSecondary.color),
+        )
+        return
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+        blocks.take(3).forEach { block ->
             Box(
                 modifier = Modifier
-                    .weight(weight.coerceAtLeast(0.02f))
-                    .fillMaxWidth()
-                    .height(6.dp)
+                    .size(Dimension.D900)
                     .clip(CircleShape)
                     .background(Color(block.colorArgb)),
             )
@@ -236,4 +203,3 @@ private fun Timer.subtitle(): String {
     val cycles = if (cycleCount > 1) " · ${cycleCount}x" else ""
     return "${blocks.size} blocks · $durText$cycles"
 }
-
