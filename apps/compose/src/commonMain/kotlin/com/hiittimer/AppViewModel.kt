@@ -1,6 +1,6 @@
 package com.dangerfield.hiittimer
 
-import com.dangerfield.hiittimer.features.home.HomeRoute
+import com.dangerfield.hiittimer.features.timers.TimerListRoute
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
 import com.dangerfield.hiittimer.libraries.hiittimer.AppCache
 import com.dangerfield.hiittimer.libraries.navigation.Route
@@ -44,7 +44,7 @@ class AppViewModel(
         when (action) {
             AppAction.DetermineStartDestination -> {
                 // If you have onboarding or auth or other screens before home heres the place to change the landing
-                val destination: Route = HomeRoute()
+                val destination: Route = TimerListRoute()
                 
                 action.updateState { it.copy(startDestination = destination) }
                 _isReady.value = true

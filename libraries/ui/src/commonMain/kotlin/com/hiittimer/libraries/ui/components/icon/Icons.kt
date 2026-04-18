@@ -24,7 +24,13 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Egg
 import androidx.compose.material.icons.filled.Exposure
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person4
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Window
 import androidx.compose.material.icons.outlined.AccessTime
@@ -256,6 +262,30 @@ enum class Icons(
 
     FitScreen(
         default = androidx.compose.material.icons.Icons.Rounded.FitScreen,
+    ),
+
+    Play(
+        default = androidx.compose.material.icons.Icons.Filled.PlayArrow,
+    ),
+
+    Pause(
+        default = androidx.compose.material.icons.Icons.Filled.Pause,
+    ),
+
+    SkipNext(
+        default = androidx.compose.material.icons.Icons.Filled.SkipNext,
+    ),
+
+    VolumeUp(
+        default = androidx.compose.material.icons.Icons.Filled.VolumeUp,
+    ),
+
+    VolumeOff(
+        default = androidx.compose.material.icons.Icons.Filled.VolumeOff,
+    ),
+
+    Copy(
+        default = androidx.compose.material.icons.Icons.Filled.ContentCopy,
     )
 
     ;

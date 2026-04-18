@@ -42,6 +42,11 @@ include(":apps:server")
 // Features
 include(":features:home")
 include(":features:home:impl")
+include(":features:settings")
+include(":features:settings:impl")
+include(":features:timers")
+include(":features:timers:impl")
+include(":features:timers:storage")
 
 
 // Libraries
@@ -51,7 +56,11 @@ include(":libraries:core")
 include(":libraries:flowroutines")
 include(":libraries:navigation")
 include(":libraries:navigation:impl")
+include(":libraries:preferences")
+include(":libraries:preferences:impl")
 include(":libraries:resources")
+include(":libraries:review")
+include(":libraries:review:impl")
 include(":libraries:storage")
 include(":libraries:storage:impl")
 include(":libraries:hiittimer")

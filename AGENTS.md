@@ -29,6 +29,8 @@ libraries/<name>/impl/ # Implementations
 
 **Rules:** Features never depend on features. Shared code → libraries. Main modules expose interfaces only; impl modules contain implementations.
 
+**Storage exception:** `libraries/storage/impl` may depend on any submodule named `storage`, whether under `libraries/*` or `features/*` (e.g. `features/timers/storage`). This lets features colocate their Room entities/DAOs while still registering them with the single global `AppDatabase`. Nothing else should depend on a feature's storage submodule.
+
 ## Convention Plugins
 
 | Plugin | Use |

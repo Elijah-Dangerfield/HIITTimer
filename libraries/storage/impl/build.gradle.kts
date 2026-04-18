@@ -17,6 +17,7 @@ kotlin {
             implementation(projects.libraries.flowroutines)
             implementation(projects.libraries.hiittimer)
             implementation(projects.libraries.hiittimer.storage)
+            implementation(projects.features.timers.storage)
             implementation(libs.kotlinx.serialization.json)
         }
     }

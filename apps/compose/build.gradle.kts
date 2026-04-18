@@ -38,6 +38,16 @@ kotlin {
 
             implementation(projects.features.home)
             implementation(projects.features.home.impl)
+            implementation(projects.features.timers)
+            implementation(projects.features.timers.impl)
+            implementation(projects.features.timers.storage)
+            implementation(projects.features.settings)
+            implementation(projects.features.settings.impl)
+
+            implementation(projects.libraries.preferences)
+            implementation(projects.libraries.preferences.impl)
+            implementation(projects.libraries.review)
+            implementation(projects.libraries.review.impl)
 
             implementation(libs.atomicfu)
             

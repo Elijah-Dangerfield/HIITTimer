@@ -12,9 +12,5 @@
 	<string>We need access to Family Controls to monitor and manage screen time.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>We'd like to send you notifications to help you stay on track with your screen time goals.</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>processing</string>
-	</array>
 </dict>
 </plist>
