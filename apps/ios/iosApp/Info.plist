@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.dangerfield.hiittimer.maintenance</string>
+	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>NSFamilyControlsUsageDescription</key>
+	<string>We need access to Family Controls to monitor and manage screen time.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>We'd like to send you notifications to help you stay on track with your screen time goals.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>processing</string>
+	</array>
+</dict>
+</plist>
