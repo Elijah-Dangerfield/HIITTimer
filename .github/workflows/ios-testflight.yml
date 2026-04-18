@@ -23,7 +23,7 @@ concurrency:
 jobs:
   deploy:
     name: Build + TestFlight
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
 
     env:
@@ -38,8 +38,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode.app
+      - name: Select latest Xcode 16
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$XCODE_PATH" ]; then
+            echo "::error::No Xcode 16.x found on runner"
+            ls /Applications | grep -i xcode
+            exit 1
+          fi
+          echo "Using $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
 
       - name: Print Xcode version
         run: xcodebuild -version
