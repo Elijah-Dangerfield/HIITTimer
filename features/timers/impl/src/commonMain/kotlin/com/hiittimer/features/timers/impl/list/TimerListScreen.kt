@@ -309,7 +309,7 @@ private fun TimerCard(timer: Timer, onTap: () -> Unit, onStart: () -> Unit) {
         }
         if (timer.blocks.isNotEmpty()) {
             Spacer(modifier = Modifier.height(Dimension.D600))
-            BlockStrip(blocks = timer.blocks)
+            BlockStrip(blocks = timer.orderedBlocks)
         }
     }
 }

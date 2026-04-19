@@ -440,7 +440,7 @@ private fun Hero(
 
         if (timer.blocks.isNotEmpty()) {
             Spacer(modifier = Modifier.height(Dimension.D500))
-            BlockStrip(blocks = timer.blocks)
+            BlockStrip(blocks = timer.orderedBlocks)
         }
 
         Spacer(modifier = Modifier.height(Dimension.D900))
