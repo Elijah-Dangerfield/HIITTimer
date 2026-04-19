@@ -6,6 +6,10 @@
 	<array>
 		<string>com.dangerfield.hiittimer.maintenance</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>

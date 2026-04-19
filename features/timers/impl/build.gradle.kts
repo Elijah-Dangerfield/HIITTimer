@@ -28,5 +28,8 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
         }
+        androidMain.dependencies {
+            implementation(libs.androidx.core.ktx)
+        }
     }
 }

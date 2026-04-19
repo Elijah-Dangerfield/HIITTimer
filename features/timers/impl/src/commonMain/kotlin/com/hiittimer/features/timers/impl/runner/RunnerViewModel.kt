@@ -27,11 +27,13 @@ class RunnerViewModel(
     private val preferences: Preferences,
     private val audioFactory: AudioCuePlayerFactory,
     private val requestReviewIfPossible: RequestReviewIfPossible,
+    private val foregroundController: RunnerForegroundController,
     @Assisted private val timerId: String,
 ) : SEAViewModel<RunnerUiState, RunnerEvent, RunnerAction>(initialStateArg = RunnerUiState()) {
 
     private var engine: RunnerEngine? = null
     private var audio: AudioCuePlayer? = null
+    private var foregroundStarted: Boolean = false
 
     init {
         takeAction(RunnerAction.Load)
@@ -58,6 +60,7 @@ class RunnerViewModel(
                 engine?.stop()
                 audio?.release()
                 audio = null
+                stopForegroundIfNeeded()
                 sendEvent(RunnerEvent.Exit)
             }
         }
@@ -89,10 +92,16 @@ class RunnerViewModel(
         val player = audioFactory.create().also { audio = it }
         player.setMode(state.soundMode)
 
+        if (!foregroundStarted) {
+            foregroundController.start()
+            foregroundStarted = true
+        }
+
         viewModelScope.launch {
             e.state.collect { engineState ->
                 updateState { it.copy(engineState = engineState) }
                 if (engineState is RunnerState.Finished) {
+                    stopForegroundIfNeeded()
                     val completed = preferences.get(CompletedWorkoutsPref) + 1
                     preferences.set(CompletedWorkoutsPref, completed)
                     if (completed >= REVIEW_PROMPT_COMPLETION_THRESHOLD &&
@@ -115,8 +124,16 @@ class RunnerViewModel(
         viewModelScope.launch { e.start() }
     }
 
+    private fun stopForegroundIfNeeded() {
+        if (foregroundStarted) {
+            foregroundController.stop()
+            foregroundStarted = false
+        }
+    }
+
     override fun onCleared() {
         audio?.release()
+        stopForegroundIfNeeded()
         super.onCleared()
     }
 }
