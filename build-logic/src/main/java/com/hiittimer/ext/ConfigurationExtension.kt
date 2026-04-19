@@ -3,6 +3,7 @@ package com.dangerfield.hiittimer.ext
 import androidx.room.gradle.RoomExtension
 import com.dangerfield.hiittimer.util.addKspDependencyForAllTargets
 import com.dangerfield.hiittimer.util.configureKotlinInject
+import com.dangerfield.hiittimer.util.enableExpectActualClasses
 import com.dangerfield.hiittimer.util.getModule
 import com.dangerfield.hiittimer.util.libs
 import com.dangerfield.hiittimer.util.optInKotlinMarkers
@@ -32,6 +33,7 @@ abstract class ConfigurationExtension {
             add("implementation", getModule("libraries:storage"))
         }
         project.addKspDependencyForAllTargets(project.libs.androidx.room.compiler)
+        project.enableExpectActualClasses()
     }
 
 

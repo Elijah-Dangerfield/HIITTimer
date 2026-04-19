@@ -18,7 +18,7 @@ import com.dangerfield.hiittimer.libraries.ui.system.color.ColorResource
 import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.Dimension
 import com.dangerfield.hiittimer.system.VerticalSpacerD800
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun BasicBottomSheet(

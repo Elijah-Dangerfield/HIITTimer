@@ -2,7 +2,7 @@ package com.dangerfield.hiittimer.libraries.storage.impl.db
 
 import androidx.room.ProvidedTypeConverter
 import androidx.room.TypeConverter
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer

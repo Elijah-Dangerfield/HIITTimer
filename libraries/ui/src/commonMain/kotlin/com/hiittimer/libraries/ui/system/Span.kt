@@ -17,7 +17,7 @@ import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.libraries.core.throwIfDebug
 import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.VerticalSpacerD800
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 const val ANNOTATED_STRING_URL_KEY = "URL"
 const val ANNOTATED_STRING_ON_CLICK_KEY = "ON_CLICK"

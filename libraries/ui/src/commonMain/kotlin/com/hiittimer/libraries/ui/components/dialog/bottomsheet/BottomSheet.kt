@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.dangerfield.hiittimer.libraries.ui.components.dialog.bottomsheet
 
 import androidx.compose.foundation.layout.Column
@@ -26,7 +28,7 @@ import com.dangerfield.hiittimer.system.color.ProvideContentColor
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import com.dangerfield.hiittimer.libraries.ui.system.color.ColorResource
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable

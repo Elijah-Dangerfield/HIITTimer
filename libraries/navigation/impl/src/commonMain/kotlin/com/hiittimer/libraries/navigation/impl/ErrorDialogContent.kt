@@ -19,7 +19,7 @@ import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.Dimension
 import com.dangerfield.hiittimer.system.VerticalSpacerD1000
 import com.dangerfield.hiittimer.system.VerticalSpacerD500
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 internal fun ErrorDialog(

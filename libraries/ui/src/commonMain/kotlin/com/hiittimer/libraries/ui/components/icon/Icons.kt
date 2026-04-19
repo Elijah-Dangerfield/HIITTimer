@@ -79,7 +79,7 @@ import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.system.HorizontalSpacerD800
 import com.dangerfield.hiittimer.libraries.ui.system.LocalBuildInfo
 import com.dangerfield.hiittimer.system.VerticalSpacerD500
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * Design‑system icon resource, similar to `ColorResource`/`TypographyResource`.

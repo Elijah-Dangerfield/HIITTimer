@@ -28,7 +28,7 @@ import com.dangerfield.hiittimer.libraries.ui.system.color.ColorResource
 import com.dangerfield.hiittimer.libraries.ui.system.color.toHexString
 import com.dangerfield.hiittimer.system.Dimension
 import com.dangerfield.hiittimer.system.Radii
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Immutable
 @Suppress("LongParameterList")

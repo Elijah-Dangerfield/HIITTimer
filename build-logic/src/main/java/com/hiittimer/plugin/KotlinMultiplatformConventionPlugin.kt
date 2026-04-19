@@ -5,6 +5,7 @@ import com.dangerfield.hiittimer.ext.ConfigurationExtension
 import com.dangerfield.hiittimer.util.configureAndroid
 import com.dangerfield.hiittimer.util.configureKotlinMultiplatform
 import com.dangerfield.hiittimer.util.configureKotlinInject
+import com.dangerfield.hiittimer.util.enableExpectActualClasses
 import com.dangerfield.hiittimer.util.libs
 import com.dangerfield.hiittimer.util.loadSupabaseMetadata
 import com.dangerfield.hiittimer.util.loadVersionMetadata
@@ -57,6 +58,7 @@ class KotlinMultiplatformConventionPlugin : Plugin<Project> {
 
             configureKotlinMultiplatform()
             configureKotlinInject()
+            enableExpectActualClasses()
 
             project.optInKotlinMarkers("kotlin.time.ExperimentalTime")
             project.optInKotlinMarkers("kotlin.uuid.ExperimentalUuidApi")

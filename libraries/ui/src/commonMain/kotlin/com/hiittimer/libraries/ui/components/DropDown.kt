@@ -17,7 +17,7 @@ import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.Dimension
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material3.DropdownMenu as MaterialDropdownMenu
 import androidx.compose.material3.DropdownMenuItem as MaterialDropdownMenuItem
 

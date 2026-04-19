@@ -30,7 +30,7 @@ import com.dangerfield.hiittimer.libraries.ui.components.header.TopBar
 import com.dangerfield.hiittimer.libraries.ui.components.text.OutlinedTextField
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.libraries.ui.screenContentPadding
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 private const val BUG_REPORT_CHAR_LIMIT = 180
 

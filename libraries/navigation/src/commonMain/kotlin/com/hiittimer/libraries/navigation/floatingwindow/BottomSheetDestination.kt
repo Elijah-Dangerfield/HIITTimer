@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.dangerfield.hiittimer.libraries.navigation.floatingwindow
 
 import androidx.compose.runtime.Composable

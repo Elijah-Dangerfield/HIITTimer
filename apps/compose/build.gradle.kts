@@ -1,6 +1,6 @@
 plugins {
     id("hiittimer.application")
-    id("co.touchlab.skie") version "0.10.8"
+    id("co.touchlab.skie") version "0.10.11"
 
 }
 
@@ -57,7 +57,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.materialIconsExtended)
             implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
+            implementation(libs.compose.ui.tooling.preview)
         }
     }
 }

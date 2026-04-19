@@ -22,7 +22,7 @@ kotlin {
             api(compose.foundation)
             api(compose.material3)
             api(compose.components.resources)
-            api(compose.components.uiToolingPreview)
+            api(libs.compose.ui.tooling.preview)
             api(compose.materialIconsExtended)
             api(compose.material3AdaptiveNavigationSuite)
         }

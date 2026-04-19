@@ -1,6 +1,6 @@
 package com.dangerfield.hiittimer.libraries.hiittimer
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.Serializable
 
 /**

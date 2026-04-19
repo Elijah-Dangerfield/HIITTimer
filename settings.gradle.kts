@@ -35,7 +35,6 @@ dependencyResolutionManagement {
 // Apps
 include(":apps")
 include(":apps:compose")
-include(":apps:server")
 // Note: iOS app is not a Gradle module - it's an Xcode project in apps/ios/
 // Note: Desktop app module exists but may need to be configured
 

@@ -24,7 +24,7 @@ import com.dangerfield.hiittimer.libraries.ui.system.LocalContentColor
 import com.dangerfield.hiittimer.system.typography.TypographyResource
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import com.dangerfield.hiittimer.libraries.ui.system.color.ColorResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @NonRestartableComposable
 @Composable

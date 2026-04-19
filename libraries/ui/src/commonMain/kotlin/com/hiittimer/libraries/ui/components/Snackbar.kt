@@ -30,7 +30,7 @@ import com.dangerfield.hiittimer.system.Radii
 import com.dangerfield.hiittimer.system.VerticalSpacerD500
 import com.dangerfield.hiittimer.system.VerticalSpacerD800
 import com.dangerfield.hiittimer.system.color.ProvideContentColor
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 import kotlin.random.Random
 import androidx.compose.material3.SnackbarData as MaterialSnackbarData
 import androidx.compose.material3.SnackbarDuration as MaterialSnackbarDuration

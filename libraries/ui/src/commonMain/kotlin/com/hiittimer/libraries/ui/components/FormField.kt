@@ -21,7 +21,7 @@ import com.dangerfield.hiittimer.system.VerticalSpacerD500
 import com.dangerfield.hiittimer.libraries.ui.FieldState
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * A wrapper around a field of any kind, could be text, switch, anything

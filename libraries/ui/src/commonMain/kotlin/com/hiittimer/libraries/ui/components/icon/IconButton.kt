@@ -29,7 +29,7 @@ import com.dangerfield.hiittimer.libraries.ui.system.color.ColorResource
 import com.dangerfield.hiittimer.libraries.ui.components.Surface
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton.Size
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @NonRestartableComposable
 @Composable

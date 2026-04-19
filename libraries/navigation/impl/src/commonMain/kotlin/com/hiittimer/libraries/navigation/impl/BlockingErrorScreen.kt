@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.dangerfield.hiittimer.libraries.navigation.impl
 
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +27,7 @@ import com.dangerfield.hiittimer.system.VerticalSpacerD1000
 import com.dangerfield.hiittimer.system.VerticalSpacerD1200
 import com.dangerfield.hiittimer.system.VerticalSpacerD1600
 import com.dangerfield.hiittimer.system.VerticalSpacerD500
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable

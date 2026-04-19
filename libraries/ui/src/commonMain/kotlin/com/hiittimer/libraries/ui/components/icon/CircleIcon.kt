@@ -16,7 +16,7 @@ import com.dangerfield.hiittimer.libraries.ui.Elevation
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import com.dangerfield.hiittimer.libraries.ui.system.color.ColorResource
 import com.dangerfield.hiittimer.libraries.ui.components.Surface
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun CircleIcon(

@@ -22,7 +22,7 @@ import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonSize
 import com.dangerfield.hiittimer.libraries.ui.components.button.ProvideButtonConfig
 import com.dangerfield.hiittimer.libraries.ui.components.text.ProvideTextConfig
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun ModalContent(

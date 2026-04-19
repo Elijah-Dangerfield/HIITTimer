@@ -46,7 +46,7 @@ import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.Dimension
 import com.dangerfield.hiittimer.system.Radii
 import com.dangerfield.hiittimer.system.VerticalSpacerD1600
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 sealed class BottomBarItem(
     val title: String,

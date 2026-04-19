@@ -14,7 +14,7 @@ import com.dangerfield.hiittimer.libraries.ui.FieldState.Invalid
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import com.dangerfield.hiittimer.libraries.ui.components.ErrorBehavior
 import com.dangerfield.hiittimer.libraries.ui.components.FormField
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun OutlineInputField(

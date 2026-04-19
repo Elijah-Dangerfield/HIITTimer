@@ -47,7 +47,7 @@ import com.dangerfield.hiittimer.libraries.ui.components.icon.Icons
 import com.dangerfield.hiittimer.libraries.ui.components.icon.CircleIcon
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconSize
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 

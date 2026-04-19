@@ -92,7 +92,9 @@ class AndroidAudioCuePlayer(
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) = Unit
                     override fun onDone(utteranceId: String?) = Unit
+                    @Deprecated("deprecated in Android T (API 33); kept to satisfy abstract method")
                     override fun onError(utteranceId: String?) = Unit
+                    override fun onError(utteranceId: String?, errorCode: Int) = Unit
                 })
                 ttsReady = true
             }

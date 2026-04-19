@@ -39,6 +39,24 @@ internal fun Project.optInKotlinMarkers(vararg markerClasses: String) {
   }
 }
 
+internal fun Project.enableExpectActualClasses() {
+  tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions.freeCompilerArgs.add("-Xexpect-actual-classes")
+  }
+  
+  pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
+    extensions.configure<KotlinMultiplatformExtension> {
+      targets.configureEach {
+        compilations.configureEach {
+          compilerOptions.configure {
+            freeCompilerArgs.add("-Xexpect-actual-classes")
+          }
+        }
+      }
+    }
+  }
+}
+
 /**
  * Get the module or submodule as a [Dependency]
  */

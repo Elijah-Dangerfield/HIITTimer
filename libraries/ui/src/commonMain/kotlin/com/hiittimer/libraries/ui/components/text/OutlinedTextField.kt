@@ -25,7 +25,7 @@ import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.Radii
 import com.dangerfield.hiittimer.system.typography.TypographyResource
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

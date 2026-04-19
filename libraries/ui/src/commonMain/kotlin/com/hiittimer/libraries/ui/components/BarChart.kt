@@ -39,7 +39,7 @@ import com.dangerfield.hiittimer.system.Dimension
 import com.dangerfield.hiittimer.system.VerticalSpacerD200
 import com.dangerfield.hiittimer.system.VerticalSpacerD500
 import com.dangerfield.hiittimer.system.thenIf
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log10

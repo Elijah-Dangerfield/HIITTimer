@@ -2,7 +2,7 @@ package com.dangerfield.hiittimer.libraries.hiittimer.storage.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Represents a user session - a contiguous period of app usage.

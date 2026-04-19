@@ -38,7 +38,7 @@ import com.dangerfield.hiittimer.system.Radii
 import com.dangerfield.hiittimer.system.VerticalSpacerD200
 import com.dangerfield.hiittimer.system.thenIf
 import com.dangerfield.hiittimer.system.typography.TypographyResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun ListSection(

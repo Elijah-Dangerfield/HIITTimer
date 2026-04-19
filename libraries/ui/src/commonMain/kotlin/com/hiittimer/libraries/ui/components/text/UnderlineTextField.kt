@@ -28,7 +28,7 @@ import com.dangerfield.hiittimer.system.Dimension.D200
 import com.dangerfield.hiittimer.system.Dimension.D700
 import com.dangerfield.hiittimer.system.typography.TypographyResource
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun UnderlineTextField(

@@ -31,7 +31,7 @@ import com.dangerfield.hiittimer.system.Dimension
 import com.dangerfield.hiittimer.system.LineHeightRatio
 import com.dangerfield.hiittimer.system.lineHeight
 import com.dangerfield.hiittimer.system.sp
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * Typography System Guidelines

@@ -36,7 +36,7 @@ import com.dangerfield.hiittimer.features.timers.BlockRole
 import com.dangerfield.hiittimer.features.timers.Timer
 import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 import kotlin.time.Duration.Companion.seconds
 import com.dangerfield.hiittimer.libraries.ui.components.HorizontalDivider
 import com.dangerfield.hiittimer.libraries.ui.components.Screen

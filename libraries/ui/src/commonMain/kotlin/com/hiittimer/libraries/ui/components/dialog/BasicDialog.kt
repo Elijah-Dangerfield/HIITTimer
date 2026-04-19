@@ -15,7 +15,7 @@ import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonSize
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonType
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.system.Dimension
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun BasicDialog(
