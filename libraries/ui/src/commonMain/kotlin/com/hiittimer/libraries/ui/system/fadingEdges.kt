@@ -75,14 +75,16 @@ fun Modifier.fadingEdge(
                     defaultFadeHeight
                 }
 
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = bottomColors,
-                        startY = size.height - fadeHeightPx,
-                        endY = size.height
-                    ),
-                    blendMode = BlendMode.DstIn
-                )
+                if (fadeHeightPx > 0f) {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = bottomColors,
+                            startY = size.height - fadeHeightPx,
+                            endY = size.height
+                        ),
+                        blendMode = BlendMode.DstIn
+                    )
+                }
             }
         }
 }
