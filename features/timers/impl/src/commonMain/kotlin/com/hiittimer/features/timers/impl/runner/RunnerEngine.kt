@@ -133,7 +133,7 @@ class RunnerEngine(private val timer: Timer) {
             advanceBlock(current, forcedAdvance = false)
             return
         }
-        val remainingSecs = newRemaining.inWholeSeconds.toInt()
+        val remainingSecs = ((newRemaining.inWholeMilliseconds + 999L) / 1000L).toInt()
         if (remainingSecs != lastSecondEmitted) {
             lastSecondEmitted = remainingSecs
             if (remainingSecs in 1..3) emitCue(RunnerCue.Countdown(remainingSecs))

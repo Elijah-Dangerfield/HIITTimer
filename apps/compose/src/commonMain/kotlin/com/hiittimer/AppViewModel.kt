@@ -12,15 +12,11 @@ import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 
 /**
- * App-level ViewModel that handles initial routing decisions.
- * 
- * Emits [AppEvent.NavigateTo] once it determines where the user should go.
- * The SplashScreen observes this and handles navigation timing:
- * - On iOS: waits for typewriter animation, then navigates
- * - On Android: navigates immediately (native splash already showed)
- * 
- * Scoped as singleton so Android's splash screen condition and Compose share
- * the same instance.
+ * App-level ViewModel that decides the initial route and tracks whether the
+ * iOS typewriter splash has already played this process.
+ *
+ * Scoped as singleton so Android's splash-screen API and the Compose overlay
+ * share the same instance.
  */
 @SingleIn(AppScope::class)
 @Inject
@@ -29,8 +25,8 @@ class AppViewModel(
 ) : SEAViewModel<AppState, AppEvent, AppAction>(AppState()) {
 
     private val _isReady = MutableStateFlow(false)
-    
-    /** 
+
+    /**
      * Exposed to Android's splash screen API for keepOnScreenCondition.
      * True once we've determined where to navigate.
      */
@@ -43,12 +39,13 @@ class AppViewModel(
     override suspend fun handleAction(action: AppAction) {
         when (action) {
             AppAction.DetermineStartDestination -> {
-                // If you have onboarding or auth or other screens before home heres the place to change the landing
                 val destination: Route = TimerListRoute()
-                
+
                 action.updateState { it.copy(startDestination = destination) }
                 _isReady.value = true
-                sendEvent(AppEvent.NavigateTo(destination))
+            }
+            AppAction.MarkSplashShown -> {
+                action.updateState { it.copy(hasShownSplash = true) }
             }
         }
     }
@@ -56,13 +53,12 @@ class AppViewModel(
 
 data class AppState(
     val startDestination: Route? = null,
+    val hasShownSplash: Boolean = false,
 )
 
-sealed class AppEvent {
-    /** Navigate to the given route, clearing the back stack */
-    data class NavigateTo(val route: Route) : AppEvent()
-}
+sealed class AppEvent
 
 sealed class AppAction {
     data object DetermineStartDestination : AppAction()
+    data object MarkSplashShown : AppAction()
 }

@@ -102,7 +102,7 @@ class IosAudioCuePlayer(
         private const val LONG_BEEP: UInt = 1052u
         private const val FINISH_SOUND: UInt = 1025u
 
-        private const val MIX_WITH_OTHERS: UInt = 1u
-        private const val DUCK_OTHERS: UInt = 2u
+        private const val MIX_WITH_OTHERS: ULong = 1u
+        private const val DUCK_OTHERS: ULong = 2u
     }
 }

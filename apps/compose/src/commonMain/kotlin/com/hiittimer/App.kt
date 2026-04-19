@@ -5,16 +5,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dangerfield.hiittimer.libraries.ui.PreviewAppState
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
@@ -32,18 +28,15 @@ import com.dangerfield.hiittimer.libraries.core.BuildInfo
 import com.dangerfield.hiittimer.libraries.core.logging.KLog
 import com.dangerfield.hiittimer.libraries.navigation.AnimationType
 import com.dangerfield.hiittimer.libraries.navigation.FeatureEntryPoint
-import com.dangerfield.hiittimer.libraries.navigation.NavigationOptions
 import com.dangerfield.hiittimer.libraries.navigation.Route
 import com.dangerfield.hiittimer.libraries.navigation.floatingwindow.FloatingWindowHost
 import com.dangerfield.hiittimer.libraries.navigation.floatingwindow.FloatingWindowNavigator
 import com.dangerfield.hiittimer.libraries.navigation.impl.DelegatingRouter
-import com.dangerfield.hiittimer.libraries.navigation.screen
 import com.dangerfield.hiittimer.libraries.navigation.serializableType
 import com.dangerfield.hiittimer.libraries.navigation.toEnterTransition
 import com.dangerfield.hiittimer.libraries.navigation.toExitTransition
 import com.dangerfield.hiittimer.libraries.navigation.toRouteOrNull
 import com.dangerfield.hiittimer.system.AppThemeProvider
-import kotlinx.coroutines.flow.collectLatest
 import kotlin.reflect.typeOf
 import kotlin.time.Duration.Companion.seconds
 
@@ -54,12 +47,11 @@ fun App(appComponent: AppComponent) {
     val floatingWindowNavigator = remember { FloatingWindowNavigator() }
     val navController = rememberNavController(floatingWindowNavigator)
     val appRecomposeLogger = remember { KLog.withTag("AppRecompose") }
-    val splashRoute = remember { SplashRoute() }
     val router = remember { appComponent.delegatingRouter }
     val dialogHostState = rememberDialogHostState()
-    
+
     val shakeHandler = remember { appComponent.shakeHandler }
-    
+
     DisposableEffect(shakeHandler) {
         shakeHandler.start()
         onDispose {
@@ -70,8 +62,8 @@ fun App(appComponent: AppComponent) {
     RecompositionCounter(
         tag = "App",
         logEvery = 1,
-        rapidRecompositionThreshold = 6,
-        rapidRecompositionWindow = 60.seconds,
+        rapidRecompositionThreshold = 15,
+        rapidRecompositionWindow = 2.seconds,
         onRecompose = { count ->
             val message = if (count == 1L) {
                 "App recomposed (this should be rare)"
@@ -101,15 +93,21 @@ fun App(appComponent: AppComponent) {
     ) {
         AppThemeProvider {
             Box(modifier = Modifier.fillMaxSize()) {
-                AppNavigation(
-                    navController = navController,
-                    floatingWindowNavigator = floatingWindowNavigator,
-                    featureEntryPoints = appComponent.featureEntryPoints,
-                    startDestination = splashRoute,
-                    router = router,
-                    appViewModel = appViewModel,
-                    destinationRoute = state.startDestination,
-                )
+                state.startDestination?.let { startDestination ->
+                    AppNavigation(
+                        navController = navController,
+                        floatingWindowNavigator = floatingWindowNavigator,
+                        featureEntryPoints = appComponent.featureEntryPoints,
+                        startDestination = startDestination,
+                        router = router,
+                    )
+                }
+
+                if (!state.hasShownSplash) {
+                    SplashOverlay(
+                        onComplete = { appViewModel.takeAction(AppAction.MarkSplashShown) }
+                    )
+                }
 
                 DialogHost(
                     modifier = Modifier.matchParentSize(),
@@ -125,10 +123,8 @@ private fun AppNavigation(
     navController: NavHostController,
     floatingWindowNavigator: FloatingWindowNavigator,
     featureEntryPoints: Set<FeatureEntryPoint>,
-    startDestination: Any,
+    startDestination: Route,
     router: DelegatingRouter,
-    appViewModel: AppViewModel,
-    destinationRoute: Route?,
 ) {
 
     Screen(
@@ -198,32 +194,11 @@ private fun AppNavigation(
                     typeOf<AnimationType>() to serializableType<AnimationType>()
                 )
             ) {
-                // Register splash screen with access to destination and router
-                screen<SplashRoute>(
-                    typeMap = mapOf(typeOf<AnimationType>() to serializableType<AnimationType>())
-                ) {
-                    SplashScreen(
-                        destinationRoute = destinationRoute,
-                        onNavigate = { route ->
-                            router.navigate(
-                                route = route,
-                                options = NavigationOptions(
-                                    clearBackStack = true,
-                                    launchSingleTop = true
-                                )
-                            )
-                        }
-                    )
-                }
-                
-                // Register all other feature entry points
-                featureEntryPoints
-                    .filterNot { it is SplashScreenEntryPoint }
-                    .forEach { entryPoint ->
-                        with(entryPoint) {
-                            buildNavGraph(router)
-                        }
+                featureEntryPoints.forEach { entryPoint ->
+                    with(entryPoint) {
+                        buildNavGraph(router)
                     }
+                }
             }
 
             FloatingWindowHost(floatingWindowNavigator)
