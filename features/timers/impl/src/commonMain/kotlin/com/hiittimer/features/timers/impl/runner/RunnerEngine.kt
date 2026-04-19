@@ -1,6 +1,7 @@
 package com.dangerfield.hiittimer.features.timers.impl.runner
 
 import com.dangerfield.hiittimer.features.timers.Block
+import com.dangerfield.hiittimer.features.timers.BlockRole
 import com.dangerfield.hiittimer.features.timers.Timer
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -20,26 +21,24 @@ sealed interface RunnerState {
     data class Running(
         val timer: Timer,
         val blockIndex: Int,
-        val cycleIndex: Int,
+        val currentBlock: Block,
+        val nextBlock: Block?,
+        val phase: BlockRole,
+        val cycleRoundIndex: Int,
         val remaining: Duration,
         val elapsedTotal: Duration,
     ) : RunnerState {
-        val currentBlock: Block get() = timer.blocks[blockIndex]
-        val nextBlock: Block?
-            get() {
-                val nextIdx = blockIndex + 1
-                return when {
-                    nextIdx < timer.blocks.size -> timer.blocks[nextIdx]
-                    cycleIndex + 1 < timer.cycleCount -> timer.blocks.firstOrNull()
-                    else -> null
-                }
-            }
         val totalDuration: Duration get() = timer.totalDuration
     }
 
     data class Paused(val snapshot: Running) : RunnerState
 
-    data class Finished(val timer: Timer) : RunnerState
+    data class Finished(
+        val timer: Timer,
+        val elapsed: Duration,
+        val completedBlockCount: Int,
+        val completedRounds: Int,
+    ) : RunnerState
 }
 
 sealed interface RunnerCue {
@@ -51,10 +50,15 @@ sealed interface RunnerCue {
 
 class RunnerEngine(private val timer: Timer) {
 
+    private val sequence: List<SequenceEntry> = buildSequence(timer)
+
     private val _state = MutableStateFlow<RunnerState>(RunnerState.Idle)
     val state: StateFlow<RunnerState> = _state.asStateFlow()
 
-    private val _cues = MutableSharedFlow<RunnerCue>(extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val _cues = MutableSharedFlow<RunnerCue>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
     val cues: Flow<RunnerCue> = _cues.asSharedFlow()
 
     private val tickIntervalMs = 50L
@@ -63,18 +67,17 @@ class RunnerEngine(private val timer: Timer) {
     private var running = false
 
     suspend fun start() {
-        if (timer.blocks.isEmpty()) {
-            _state.value = RunnerState.Finished(timer)
+        if (sequence.isEmpty()) {
+            _state.value = RunnerState.Finished(
+                timer = timer,
+                elapsed = Duration.ZERO,
+                completedBlockCount = 0,
+                completedRounds = 0,
+            )
             return
         }
-        _state.value = RunnerState.Running(
-            timer = timer,
-            blockIndex = 0,
-            cycleIndex = 0,
-            remaining = timer.blocks.first().duration,
-            elapsedTotal = Duration.ZERO,
-        )
-        emitCue(RunnerCue.BlockStart(timer.blocks.first()))
+        _state.value = runningFor(index = 0, elapsed = Duration.ZERO, remaining = sequence.first().block.duration)
+        emitCue(RunnerCue.BlockStart(sequence.first().block))
         loop()
     }
 
@@ -149,37 +152,59 @@ class RunnerEngine(private val timer: Timer) {
     private fun advanceBlock(current: RunnerState.Running, forcedAdvance: Boolean) {
         lastSecondEmitted = -1
         halfwayEmitted = false
-        val nextBlockIdx = current.blockIndex + 1
-        val elapsedAfter = if (forcedAdvance) {
-            current.elapsedTotal + current.remaining
-        } else current.elapsedTotal
-        if (nextBlockIdx < current.timer.blocks.size) {
-            val next = current.timer.blocks[nextBlockIdx]
-            _state.value = current.copy(
-                blockIndex = nextBlockIdx,
-                remaining = next.duration,
-                elapsedTotal = elapsedAfter,
+        val elapsedAfter = if (forcedAdvance) current.elapsedTotal + current.remaining else current.elapsedTotal
+        val nextIdx = current.blockIndex + 1
+        if (nextIdx < sequence.size) {
+            _state.value = runningFor(
+                index = nextIdx,
+                elapsed = elapsedAfter,
+                remaining = sequence[nextIdx].block.duration,
             )
-            emitCue(RunnerCue.BlockStart(next))
+            emitCue(RunnerCue.BlockStart(sequence[nextIdx].block))
             return
         }
-        val nextCycleIdx = current.cycleIndex + 1
-        if (nextCycleIdx < current.timer.cycleCount) {
-            val next = current.timer.blocks.first()
-            _state.value = current.copy(
-                blockIndex = 0,
-                cycleIndex = nextCycleIdx,
-                remaining = next.duration,
-                elapsedTotal = elapsedAfter,
-            )
-            emitCue(RunnerCue.BlockStart(next))
-            return
-        }
-        _state.value = RunnerState.Finished(current.timer)
+        _state.value = RunnerState.Finished(
+            timer = timer,
+            elapsed = elapsedAfter,
+            completedBlockCount = sequence.size,
+            completedRounds = timer.cycleCount,
+        )
         emitCue(RunnerCue.Finish)
+    }
+
+    private fun runningFor(index: Int, elapsed: Duration, remaining: Duration): RunnerState.Running {
+        val entry = sequence[index]
+        val next = sequence.getOrNull(index + 1)?.block
+        return RunnerState.Running(
+            timer = timer,
+            blockIndex = index,
+            currentBlock = entry.block,
+            nextBlock = next,
+            phase = entry.phase,
+            cycleRoundIndex = entry.cycleRoundIndex,
+            remaining = remaining,
+            elapsedTotal = elapsed,
+        )
     }
 
     private fun emitCue(cue: RunnerCue) {
         _cues.tryEmit(cue)
+    }
+
+    private data class SequenceEntry(
+        val block: Block,
+        val phase: BlockRole,
+        /** 0-based round within cycle phase; 0 for warmup and cooldown. */
+        val cycleRoundIndex: Int,
+    )
+
+    private companion object {
+        fun buildSequence(timer: Timer): List<SequenceEntry> = buildList {
+            timer.warmupBlocks.forEach { add(SequenceEntry(it, BlockRole.Warmup, 0)) }
+            repeat(timer.cycleCount) { round ->
+                timer.cycleBlocks.forEach { add(SequenceEntry(it, BlockRole.Cycle, round)) }
+            }
+            timer.cooldownBlocks.forEach { add(SequenceEntry(it, BlockRole.Cooldown, 0)) }
+        }
     }
 }

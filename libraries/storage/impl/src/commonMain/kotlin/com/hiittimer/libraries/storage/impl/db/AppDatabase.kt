@@ -20,7 +20,7 @@ import com.dangerfield.hiittimer.libraries.hiittimer.storage.db.UserEntity
         TimerEntity::class,
         BlockEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(CoreTypeConverters::class)

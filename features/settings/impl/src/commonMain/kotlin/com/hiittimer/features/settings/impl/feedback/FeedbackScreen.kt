@@ -1,4 +1,4 @@
-package com.dangerfield.hiittimer.features.home.impl.bugreport
+package com.dangerfield.hiittimer.features.settings.impl.feedback
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,8 +22,6 @@ import com.dangerfield.hiittimer.system.VerticalSpacerD1000
 import com.dangerfield.hiittimer.system.VerticalSpacerD500
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
-import com.dangerfield.hiittimer.libraries.ui.components.SectionCard
-import com.dangerfield.hiittimer.libraries.ui.components.SummaryRow
 import com.dangerfield.hiittimer.libraries.ui.components.button.Button
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonSize
 import com.dangerfield.hiittimer.libraries.ui.components.header.TopBar
@@ -32,12 +30,12 @@ import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.libraries.ui.screenContentPadding
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
-private const val BUG_REPORT_CHAR_LIMIT = 180
+private const val FEEDBACK_CHAR_LIMIT = 200
 
 @Composable
-fun BugReportScreen(
-    state: BugReportState,
-    onAction: (BugReportAction) -> Unit,
+fun FeedbackScreen(
+    state: FeedbackState,
+    onAction: (FeedbackAction) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
@@ -47,8 +45,8 @@ fun BugReportScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopBar(
-                title = "Report a Bug",
-                onNavigateBack = { onAction(BugReportAction.Back) }
+                 title = "Share Your Feedback",
+                onNavigateBack = { onAction(FeedbackAction.Back) }
             )
         }
     ) { paddingValues ->
@@ -64,47 +62,19 @@ fun BugReportScreen(
         ) {
             VerticalSpacerD1000()
 
-            if (state.hasContext) {
-                SectionCard(title = "Captured details") {
-                    state.contextMessage?.let {
-                        Text(
-                            text = it,
-                            typography = AppTheme.typography.Body.B500,
-                            color = AppTheme.colors.danger
-                        )
-                    }
-
-                    state.errorCode?.let {
-                        SummaryRow(
-                            label = "Error code",
-                            value = "$it"
-                        )
-                    }
-
-                    state.logId?.let {
-                        SummaryRow(
-                            label = "Report id",
-                            value = it
-                        )
-                    }
-                }
-
-                VerticalSpacerD1000()
-            }
-
             Text(
-                text = "Help us understand what went wrong. We would love to fix it!",
+                text = "We'd love to hear from you",
                 typography = AppTheme.typography.Body.B700,
                 color = AppTheme.colors.textSecondary
             )
 
-            VerticalSpacerD1000()
+            VerticalSpacerD500()
 
             OutlinedTextField(
                 value = state.message,
                 onValueChange = { newValue ->
-                    val limited = newValue.take(BUG_REPORT_CHAR_LIMIT)
-                    onAction(BugReportAction.MessageChanged(limited))
+                    val limited = newValue.take(FEEDBACK_CHAR_LIMIT)
+                    onAction(FeedbackAction.MessageChanged(limited))
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -119,7 +89,7 @@ fun BugReportScreen(
                     onSend = {
                         if (canSubmit) {
                             focusManager.clearFocus(force = true)
-                            onAction(BugReportAction.Submit)
+                            onAction(FeedbackAction.Submit)
                         }
                     }
                 )
@@ -133,14 +103,14 @@ fun BugReportScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val messageLength = state.message.length
-                val counterColor = if (messageLength >= BUG_REPORT_CHAR_LIMIT) {
+                val counterColor = if (messageLength >= FEEDBACK_CHAR_LIMIT) {
                     AppTheme.colors.danger
                 } else {
                     AppTheme.colors.textSecondary
                 }
 
                 Text(
-                    text = "$messageLength/$BUG_REPORT_CHAR_LIMIT",
+                    text = "$messageLength/$FEEDBACK_CHAR_LIMIT",
                     color = counterColor,
                     typography = AppTheme.typography.Body.B500
                 )
@@ -164,7 +134,7 @@ fun BugReportScreen(
                 onClick = {
                     focusManager.clearFocus(force = true)
                     if (canSubmit) {
-                        onAction(BugReportAction.Submit)
+                        onAction(FeedbackAction.Submit)
                     }
                 }
             ) {
@@ -178,16 +148,27 @@ fun BugReportScreen(
 
 @Preview
 @Composable
-private fun BugReportScreenPreview() {
+private fun FeedbackScreenPreviewDisabled() {
     PreviewContent {
-        BugReportScreen(
-            state = BugReportState(
-                message = "The shortcut sheet would not open.",
-                logId = "12356j32345k1",
-                errorCode = 1200,
-                contextMessage = "Something went wrong while loading."
+        FeedbackScreen(
+            state = FeedbackState(
+                message = ""
             ),
             onAction = {}
         )
     }
 }
+
+@Preview
+@Composable
+private fun FeedbackScreenPreview() {
+    PreviewContent {
+        FeedbackScreen(
+            state = FeedbackState(
+                message = "I love this app!"
+            ),
+            onAction = {}
+        )
+    }
+}
+

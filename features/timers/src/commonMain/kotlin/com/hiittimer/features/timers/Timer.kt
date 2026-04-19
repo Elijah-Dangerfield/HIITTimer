@@ -1,7 +1,8 @@
 package com.dangerfield.hiittimer.features.timers
 
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
+
+enum class BlockRole { Warmup, Cycle, Cooldown }
 
 data class Timer(
     val id: String,
@@ -9,8 +10,17 @@ data class Timer(
     val cycleCount: Int,
     val blocks: List<Block>,
 ) {
-    val cycleDuration: Duration = blocks.fold(0.seconds) { acc, b -> acc + b.duration }
-    val totalDuration: Duration = cycleDuration * cycleCount
+    val warmupBlocks: List<Block> get() = blocks.filter { it.role == BlockRole.Warmup }
+    val cycleBlocks: List<Block> get() = blocks.filter { it.role == BlockRole.Cycle }
+    val cooldownBlocks: List<Block> get() = blocks.filter { it.role == BlockRole.Cooldown }
+
+    val cycleDuration: Duration
+        get() = cycleBlocks.fold(Duration.ZERO) { acc, b -> acc + b.duration }
+
+    val totalDuration: Duration
+        get() = warmupBlocks.fold(Duration.ZERO) { acc, b -> acc + b.duration } +
+            cycleDuration * cycleCount +
+            cooldownBlocks.fold(Duration.ZERO) { acc, b -> acc + b.duration }
 }
 
 data class Block(
@@ -18,4 +28,5 @@ data class Block(
     val name: String,
     val duration: Duration,
     val colorArgb: Int,
+    val role: BlockRole = BlockRole.Cycle,
 )

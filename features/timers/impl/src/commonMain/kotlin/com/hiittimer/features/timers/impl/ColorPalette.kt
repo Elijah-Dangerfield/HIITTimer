@@ -20,12 +20,19 @@ object ColorPalette {
 
     val defaultWorkArgb: Int = 0xFFE53935.toInt()
     val defaultRestArgb: Int = 0xFF1E88E5.toInt()
+    val warmupArgb: Int = 0xFFF9A825.toInt()   // amber
+    val lowIntensityArgb: Int = 0xFF43A047.toInt() // green
 
     fun onColorFor(argb: Int): Color {
         val r = ((argb shr 16) and 0xFF) / 255f
         val g = ((argb shr 8) and 0xFF) / 255f
         val b = (argb and 0xFF) / 255f
         val luminance = 0.2126f * r + 0.7152f * g + 0.0722f * b
+        return if (luminance > 0.55f) Color.Black else Color.White
+    }
+
+    fun onColorFor(color: Color): Color {
+        val luminance = 0.2126f * color.red + 0.7152f * color.green + 0.0722f * color.blue
         return if (luminance > 0.55f) Color.Black else Color.White
     }
 }

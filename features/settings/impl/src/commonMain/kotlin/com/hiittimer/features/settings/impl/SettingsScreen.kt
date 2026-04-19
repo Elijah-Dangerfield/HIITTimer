@@ -36,12 +36,18 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
     onOpenUrl: (String) -> Unit,
+    onNavigateToFeedback: () -> Unit,
+    onNavigateToBugReport: () -> Unit,
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collect { event ->
-            if (event is SettingsEvent.OpenUrl) onOpenUrl(event.url)
+            when (event) {
+                is SettingsEvent.OpenUrl -> onOpenUrl(event.url)
+                SettingsEvent.NavigateToFeedback -> onNavigateToFeedback()
+                SettingsEvent.NavigateToBugReport -> onNavigateToBugReport()
+            }
         }
     }
 
@@ -120,6 +126,18 @@ fun SettingsScreen(
                             leadingContent = { SettingsIcon(Icons.TipJar("Tip jar")) },
                             onClick = { viewModel.takeAction(SettingsAction.OpenTipJar) },
                         ),
+                        ListSectionItem(
+                            headlineText = "Leave feedback",
+                            supportingText = "Tell me what you think.",
+                            leadingContent = { SettingsIcon(Icons.Chat("Feedback")) },
+                            onClick = { viewModel.takeAction(SettingsAction.LeaveFeedback) },
+                        ),
+                        ListSectionItem(
+                            headlineText = "Report a bug",
+                            supportingText = "Something not working right?",
+                            leadingContent = { SettingsIcon(Icons.Bug("Bug")) },
+                            onClick = { viewModel.takeAction(SettingsAction.ReportBug) },
+                        ),
                     )
                 )
 
@@ -132,6 +150,12 @@ fun SettingsScreen(
                     Text(
                         text = "HIIT Timer",
                         typography = AppTheme.typography.Body.B400,
+                        color = AppTheme.colors.textSecondary,
+                    )
+                    Spacer(modifier = Modifier.height(Dimension.D200))
+                    Text(
+                        text = "v${state.versionName} (${state.buildNumber})",
+                        typography = AppTheme.typography.Caption.C400,
                         color = AppTheme.colors.textSecondary,
                     )
                 }
@@ -154,7 +178,6 @@ private fun Header(onBack: () -> Unit) {
         Spacer(modifier = Modifier.size(Dimension.D300))
         Text(text = "Settings", typography = AppTheme.typography.Heading.H800)
     }
-    HorizontalDivider()
 }
 
 @Composable

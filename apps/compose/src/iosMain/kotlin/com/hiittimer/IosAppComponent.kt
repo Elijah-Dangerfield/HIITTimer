@@ -1,6 +1,7 @@
 package com.dangerfield.hiittimer
 
 import com.dangerfield.hiittimer.libraries.hiittimer.PermissionManager
+import com.dangerfield.hiittimer.libraries.review.RequestReviewIfPossible
 import com.dangerfield.hiittimer.libraries.ui.nativeviews.NativeViewFactory
 import me.tatarka.inject.annotations.Provides
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
@@ -11,16 +12,21 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @SingleIn(AppScope::class)
 abstract class IosAppComponent(
     private val permissionManager: PermissionManager,
+    private val requestReviewIfPossible: RequestReviewIfPossible,
     val nativeViewFactory: NativeViewFactory
 ) : AppComponent {
 
     @Provides
     fun providePermissionManager(): PermissionManager = permissionManager
+
+    @Provides
+    fun providesRequestReviewIfPossible(): RequestReviewIfPossible = requestReviewIfPossible
 }
 
 
 @MergeComponent.CreateComponent
 expect fun create(
     permissionManager: PermissionManager,
+    requestReviewIfPossible: RequestReviewIfPossible,
     nativeViewFactory: NativeViewFactory
 ): IosAppComponent

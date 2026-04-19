@@ -25,4 +25,5 @@ data class BlockEntity(
     @ColumnInfo(name = "duration_seconds") val durationSeconds: Int,
     @ColumnInfo(name = "color_argb") val colorArgb: Int,
     @ColumnInfo(name = "sort_order") val sortOrder: Int,
+    @ColumnInfo(name = "role", defaultValue = "Cycle") val role: String = "Cycle",
 )

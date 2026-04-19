@@ -1,6 +1,6 @@
-package com.dangerfield.hiittimer.features.home.impl.bugreport
+package com.dangerfield.hiittimer.features.settings.impl.bugreport
 
-import com.dangerfield.hiittimer.features.home.impl.feedback.FeedbackRepository
+import com.dangerfield.hiittimer.features.settings.impl.feedback.FeedbackRepository
 import com.dangerfield.hiittimer.libraries.core.eitherWay
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
 import com.dangerfield.hiittimer.libraries.hiittimer.AppCache
@@ -78,3 +78,4 @@ sealed interface BugReportAction {
     data object Submit : BugReportAction
 
 }
+

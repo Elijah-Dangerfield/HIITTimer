@@ -1,4 +1,4 @@
-package com.dangerfield.hiittimer.features.home.impl.feedback
+package com.dangerfield.hiittimer.features.settings.impl.feedback
 
 import com.dangerfield.hiittimer.libraries.hiittimer.Telemetry
 import me.tatarka.inject.annotations.Inject
@@ -36,3 +36,4 @@ class FeedbackRepositoryImpl @Inject constructor(
         }
     }
 }
+

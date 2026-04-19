@@ -1,6 +1,8 @@
 package com.dangerfield.hiittimer
 
 import android.content.Context
+import com.dangerfield.hiittimer.libraries.review.RequestReviewIfPossible
+import com.dangerfield.hiittimer.libraries.review.impl.NoOpRequestReviewIfPossible
 import me.tatarka.inject.annotations.Provides
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.MergeComponent
@@ -15,4 +17,7 @@ abstract class AndroidAppComponent(
     @Provides
     fun context() = context
 
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesRequestReviewIfPossible(): RequestReviewIfPossible = NoOpRequestReviewIfPossible()
 }

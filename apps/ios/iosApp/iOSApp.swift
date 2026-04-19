@@ -4,14 +4,16 @@ import ComposeApp
 
 @main
 struct iOSApp: App {
-    
+
     let permissionManager = IOSPermissionManager()
+    let requestReviewIfPossible = IOSRequestReviewIfPossible()
     private let nativeViewFactory = IOSNativeViewFactory.shared
     private let iOSAppComponent: IosAppComponent
 
     init() {
         self.iOSAppComponent = create(
             permissionManager: permissionManager,
+            requestReviewIfPossible: requestReviewIfPossible,
             nativeViewFactory: nativeViewFactory
         )
         iOSAppComponent.telemetry.initialize()

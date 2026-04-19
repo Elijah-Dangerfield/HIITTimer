@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavGraphBuilder
-import com.dangerfield.hiittimer.features.profile.BugReportRoute
+import com.dangerfield.hiittimer.features.settings.BugReportRoute
 import com.dangerfield.hiittimer.libraries.navigation.BlockingErrorRoute
 import com.dangerfield.hiittimer.libraries.navigation.ErrorDialogAction
 import com.dangerfield.hiittimer.libraries.navigation.ErrorDialogRoute

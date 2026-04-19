@@ -18,6 +18,8 @@ kotlin {
             implementation(projects.libraries.flowroutines)
             implementation(projects.libraries.ui)
             implementation(projects.libraries.preferences)
+            implementation(projects.libraries.review)
+            implementation(libs.reorderable)
 
             implementation(compose.runtime)
             implementation(compose.foundation)

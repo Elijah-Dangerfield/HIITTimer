@@ -1,7 +1,7 @@
 package com.dangerfield.hiittimer
 
 import androidx.navigation.NavGraphBuilder
-import com.dangerfield.hiittimer.features.profile.BugReportRoute
+import com.dangerfield.hiittimer.features.settings.BugReportRoute
 import com.dangerfield.hiittimer.libraries.navigation.FeatureEntryPoint
 import com.dangerfield.hiittimer.libraries.navigation.Router
 import com.dangerfield.hiittimer.libraries.navigation.ShakeDialogRoute

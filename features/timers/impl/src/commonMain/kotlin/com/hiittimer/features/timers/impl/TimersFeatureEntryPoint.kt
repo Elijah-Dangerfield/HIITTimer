@@ -6,13 +6,10 @@ import androidx.navigation.toRoute
 import com.dangerfield.hiittimer.features.settings.SettingsRoute
 import com.dangerfield.hiittimer.features.timers.BlockEditRoute
 import com.dangerfield.hiittimer.features.timers.RunnerRoute
-import com.dangerfield.hiittimer.features.timers.TimerBuilderRoute
 import com.dangerfield.hiittimer.features.timers.TimerDetailRoute
 import com.dangerfield.hiittimer.features.timers.TimerListRoute
 import com.dangerfield.hiittimer.features.timers.impl.blockedit.BlockEditScreen
 import com.dangerfield.hiittimer.features.timers.impl.blockedit.BlockEditViewModel
-import com.dangerfield.hiittimer.features.timers.impl.builder.TimerBuilderScreen
-import com.dangerfield.hiittimer.features.timers.impl.builder.TimerBuilderViewModel
 import com.dangerfield.hiittimer.features.timers.impl.detail.TimerDetailScreen
 import com.dangerfield.hiittimer.features.timers.impl.detail.TimerDetailViewModel
 import com.dangerfield.hiittimer.features.timers.impl.list.TimerListScreen
@@ -33,7 +30,6 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class TimersFeatureEntryPoint(
     private val listViewModelFactory: () -> TimerListViewModel,
     private val detailViewModelFactory: (timerId: String) -> TimerDetailViewModel,
-    private val builderViewModelFactory: (timerId: String) -> TimerBuilderViewModel,
     private val blockEditViewModelFactory: (timerId: String, blockId: String) -> BlockEditViewModel,
     private val runnerViewModelFactory: (timerId: String) -> RunnerViewModel,
 ) : FeatureEntryPoint {
@@ -43,7 +39,8 @@ class TimersFeatureEntryPoint(
             val vm: TimerListViewModel = viewModel { listViewModelFactory() }
             TimerListScreen(
                 viewModel = vm,
-                onOpenDetail = { router.navigate(TimerDetailRoute(timerId = it)) },
+                onOpenDetail = { id, isNew -> router.navigate(TimerDetailRoute(timerId = id, isNew = isNew)) },
+                onStart = { router.navigate(RunnerRoute(timerId = it)) },
                 onOpenSettings = { router.navigate(SettingsRoute()) },
             )
         }
@@ -53,22 +50,11 @@ class TimersFeatureEntryPoint(
             val vm: TimerDetailViewModel = viewModel { detailViewModelFactory(route.timerId) }
             TimerDetailScreen(
                 viewModel = vm,
+                isNew = route.isNew,
                 onBack = { router.goBack() },
                 onStart = { router.navigate(RunnerRoute(timerId = it)) },
-                onEdit = { router.navigate(TimerBuilderRoute(timerId = it)) },
-                onOpenDuplicate = { router.navigate(TimerDetailRoute(timerId = it)) },
-            )
-        }
-
-        screen<TimerBuilderRoute> { backStackEntry ->
-            val route = backStackEntry.toRoute<TimerBuilderRoute>()
-            val timerId = route.timerId ?: return@screen
-            val vm: TimerBuilderViewModel = viewModel { builderViewModelFactory(timerId) }
-            TimerBuilderScreen(
-                viewModel = vm,
-                onBack = { router.goBack() },
                 onOpenBlock = { t, b -> router.navigate(BlockEditRoute(timerId = t, blockId = b)) },
-                onStart = { router.navigate(RunnerRoute(timerId = it)) },
+                onOpenDuplicate = { router.navigate(TimerDetailRoute(timerId = it)) },
             )
         }
 
@@ -83,7 +69,15 @@ class TimersFeatureEntryPoint(
         screen<RunnerRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<RunnerRoute>()
             val vm: RunnerViewModel = viewModel { runnerViewModelFactory(route.timerId) }
-            RunnerScreen(viewModel = vm, onExit = { router.goBack() })
+            RunnerScreen(
+                viewModel = vm,
+                onExit = { router.goBack() },
+                onSupportClick = { router.openWebLink(TIP_JAR_URL) },
+            )
         }
+    }
+
+    companion object {
+        private const val TIP_JAR_URL = "https://buymeacoffee.com/elidangerfield"
     }
 }

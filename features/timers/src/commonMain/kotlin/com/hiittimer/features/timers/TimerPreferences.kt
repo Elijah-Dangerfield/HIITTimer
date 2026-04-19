@@ -28,3 +28,13 @@ object ReviewPromptShownPref : Preference<Boolean>() {
     override val key: String = "app.review_prompt_shown"
     override val default: Boolean = false
 }
+
+object SkipBlockDeleteConfirmationPref : Preference<Boolean>() {
+    override val key: String = "block.skip_delete_confirmation"
+    override val default: Boolean = false
+}
+
+object ExampleTimerSeededPref : Preference<Boolean>() {
+    override val key: String = "app.example_timer_seeded"
+    override val default: Boolean = false
+}

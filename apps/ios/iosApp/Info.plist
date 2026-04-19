@@ -8,9 +8,19 @@
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Volt does not use the camera.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Volt does not use the microphone.</string>
 	<key>NSFamilyControlsUsageDescription</key>
 	<string>We need access to Family Controls to monitor and manage screen time.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>We'd like to send you notifications to help you stay on track with your screen time goals.</string>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleLightContent</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
 </dict>
 </plist>

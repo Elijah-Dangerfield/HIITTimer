@@ -6,8 +6,8 @@ import com.dangerfield.hiittimer.features.timers.ShowProgressBarPref
 import com.dangerfield.hiittimer.features.timers.SoundMode
 import com.dangerfield.hiittimer.features.timers.SoundModePref
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
+import com.dangerfield.hiittimer.libraries.hiittimer.AppInfo
 import com.dangerfield.hiittimer.libraries.preferences.Preferences
-import com.dangerfield.hiittimer.libraries.review.RequestReviewIfPossible
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
@@ -15,8 +15,13 @@ import me.tatarka.inject.annotations.Inject
 @Inject
 class SettingsViewModel(
     private val preferences: Preferences,
-    private val requestReview: RequestReviewIfPossible,
-) : SEAViewModel<SettingsState, SettingsEvent, SettingsAction>(initialStateArg = SettingsState()) {
+    private val appInfo: AppInfo,
+) : SEAViewModel<SettingsState, SettingsEvent, SettingsAction>(
+    initialStateArg = SettingsState(
+        versionName = appInfo.versionName,
+        buildNumber = appInfo.buildNumber,
+    ),
+) {
 
     init {
         viewModelScope.launch {
@@ -56,13 +61,16 @@ class SettingsViewModel(
             }
             is SettingsAction.SetHalfwayCallouts -> preferences.set(HalfwayCalloutsPref, action.enabled)
             is SettingsAction.SetShowProgressBar -> preferences.set(ShowProgressBarPref, action.enabled)
-            SettingsAction.RateApp -> requestReview.invoke()
+            SettingsAction.RateApp -> sendEvent(SettingsEvent.OpenUrl(APP_STORE_URL))
             SettingsAction.OpenTipJar -> sendEvent(SettingsEvent.OpenUrl(TIP_JAR_URL))
+            SettingsAction.ReportBug -> sendEvent(SettingsEvent.NavigateToBugReport)
+            SettingsAction.LeaveFeedback -> sendEvent(SettingsEvent.NavigateToFeedback)
         }
     }
 
     companion object {
-        private const val TIP_JAR_URL = "https://www.buymeacoffee.com/"
+        const val TIP_JAR_URL = "https://buymeacoffee.com/elidangerfield"
+        private const val APP_STORE_URL = "https://apps.apple.com/app/id6762529965"
     }
 }
 
@@ -76,10 +84,14 @@ data class SettingsState(
     val soundMode: SoundMode = SoundMode.Beeps,
     val halfwayCallouts: Boolean = false,
     val showProgressBar: Boolean = true,
+    val versionName: String = "",
+    val buildNumber: Int = 0,
 )
 
 sealed interface SettingsEvent {
     data class OpenUrl(val url: String) : SettingsEvent
+    data object NavigateToFeedback : SettingsEvent
+    data object NavigateToBugReport : SettingsEvent
 }
 
 sealed interface SettingsAction {
@@ -90,4 +102,6 @@ sealed interface SettingsAction {
     data class SetShowProgressBar(val enabled: Boolean) : SettingsAction
     data object RateApp : SettingsAction
     data object OpenTipJar : SettingsAction
+    data object ReportBug : SettingsAction
+    data object LeaveFeedback : SettingsAction
 }

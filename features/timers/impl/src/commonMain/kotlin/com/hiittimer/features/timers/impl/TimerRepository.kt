@@ -20,6 +20,7 @@ interface TimerRepository {
     fun observeAll(): Flow<List<Timer>>
     fun observe(id: String): Flow<Timer?>
     suspend fun create(name: String): Timer
+    suspend fun createWithBlocks(name: String, cycleCount: Int, blocks: List<Block>): Timer
     suspend fun updateTimer(timer: Timer)
     suspend fun delete(id: String)
     suspend fun duplicate(id: String): String?
@@ -64,6 +65,31 @@ class TimerRepositoryImpl(
             )
         )
         return Timer(id = id, name = name, cycleCount = 1, blocks = listOf(work, rest))
+    }
+
+    override suspend fun createWithBlocks(
+        name: String,
+        cycleCount: Int,
+        blocks: List<Block>,
+    ): Timer {
+        val now = Clock.System.now().toEpochMilliseconds()
+        val id = Uuid.random().toString()
+        val sort = dao.maxSortOrder() + 1
+        dao.upsertTimer(
+            TimerEntity(
+                id = id,
+                name = name,
+                cycleCount = cycleCount.coerceIn(1, 99),
+                sortOrder = sort,
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+        val entities = blocks.mapIndexed { index, block ->
+            block.toEntity(id, sortOrder = index)
+        }
+        if (entities.isNotEmpty()) dao.upsertBlocks(entities)
+        return Timer(id = id, name = name, cycleCount = cycleCount, blocks = blocks)
     }
 
     override suspend fun updateTimer(timer: Timer) {
@@ -111,6 +137,7 @@ class TimerRepositoryImpl(
                 name = block.name,
                 durationSeconds = block.duration.inWholeSeconds.toInt(),
                 colorArgb = block.colorArgb,
+                role = block.role.name,
             )
         )
         touchTimer(timerId)
@@ -147,6 +174,8 @@ class TimerRepositoryImpl(
         name = name,
         duration = durationSeconds.seconds,
         colorArgb = colorArgb,
+        role = runCatching { com.dangerfield.hiittimer.features.timers.BlockRole.valueOf(role) }
+            .getOrDefault(com.dangerfield.hiittimer.features.timers.BlockRole.Cycle),
     )
 
     private fun Block.toEntity(timerId: String, sortOrder: Int): BlockEntity = BlockEntity(
@@ -156,5 +185,6 @@ class TimerRepositoryImpl(
         durationSeconds = duration.inWholeSeconds.toInt(),
         colorArgb = colorArgb,
         sortOrder = sortOrder,
+        role = role.name,
     )
 }

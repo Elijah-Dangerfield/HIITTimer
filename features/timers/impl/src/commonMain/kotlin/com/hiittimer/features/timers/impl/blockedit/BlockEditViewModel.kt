@@ -2,8 +2,10 @@ package com.dangerfield.hiittimer.features.timers.impl.blockedit
 
 import androidx.lifecycle.viewModelScope
 import com.dangerfield.hiittimer.features.timers.Block
+import com.dangerfield.hiittimer.features.timers.SkipBlockDeleteConfirmationPref
 import com.dangerfield.hiittimer.features.timers.impl.TimerRepository
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
+import com.dangerfield.hiittimer.libraries.preferences.Preferences
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Assisted
@@ -13,6 +15,7 @@ import kotlin.time.Duration.Companion.seconds
 @Inject
 class BlockEditViewModel(
     private val repository: TimerRepository,
+    private val preferences: Preferences,
     @Assisted private val timerId: String,
     @Assisted private val blockId: String,
 ) : SEAViewModel<BlockEditState, BlockEditEvent, BlockEditAction>(initialStateArg = BlockEditState()) {
@@ -31,30 +34,55 @@ class BlockEditViewModel(
 
     override suspend fun handleAction(action: BlockEditAction) {
         when (action) {
-            is BlockEditAction.Receive -> action.updateState {
-                it.copy(
-                    block = action.block,
-                    nameField = if (!it.nameInitialized) action.block.name else it.nameField,
-                    nameInitialized = true,
-                )
+            is BlockEditAction.Receive -> action.updateState { it.copy(block = action.block) }
+
+            is BlockEditAction.SetDurationSeconds -> action.updateBlock {
+                it.copy(duration = action.seconds.coerceAtLeast(1).seconds)
             }
-            is BlockEditAction.Rename -> {
-                action.updateState { it.copy(nameField = action.name) }
+
+            is BlockEditAction.SetColor -> action.updateBlock { it.copy(colorArgb = action.argb) }
+
+            BlockEditAction.OpenColorPicker -> action.updateState { it.copy(colorPickerOpen = true) }
+            BlockEditAction.DismissColorPicker -> action.updateState { it.copy(colorPickerOpen = false) }
+
+            BlockEditAction.OpenRename -> action.updateState { it.copy(renameOpen = true) }
+            is BlockEditAction.CommitRename -> {
+                val newName = action.name.trim()
+                action.updateState { it.copy(renameOpen = false) }
                 val current = state.block ?: return
-                if (current.name != action.name) {
-                    val updated = current.copy(name = action.name)
+                if (newName.isNotEmpty() && current.name != newName) {
+                    val updated = current.copy(name = newName)
                     action.updateState { it.copy(block = updated) }
                     repository.updateBlock(timerId, updated)
                 }
             }
-            is BlockEditAction.AdjustSeconds -> action.updateBlock {
-                val total = it.duration.inWholeSeconds.toInt() + action.delta
-                it.copy(duration = total.coerceAtLeast(1).seconds)
+            BlockEditAction.DismissRename -> action.updateState { it.copy(renameOpen = false) }
+
+            BlockEditAction.RequestDelete -> {
+                val skip = preferences.get(SkipBlockDeleteConfirmationPref)
+                if (skip) {
+                    repository.deleteBlock(timerId, blockId)
+                    sendEvent(BlockEditEvent.Close)
+                } else {
+                    action.updateState {
+                        it.copy(deleteConfirmationOpen = true, dontAskAgainChecked = false)
+                    }
+                }
             }
-            is BlockEditAction.SetColor -> action.updateBlock { it.copy(colorArgb = action.argb) }
-            BlockEditAction.Delete -> {
+            is BlockEditAction.ToggleDontAskAgain -> action.updateState {
+                it.copy(dontAskAgainChecked = action.checked)
+            }
+            BlockEditAction.ConfirmDelete -> {
+                val dontAsk = state.dontAskAgainChecked
+                action.updateState { it.copy(deleteConfirmationOpen = false) }
+                if (dontAsk) {
+                    preferences.set(SkipBlockDeleteConfirmationPref, true)
+                }
                 repository.deleteBlock(timerId, blockId)
                 sendEvent(BlockEditEvent.Close)
+            }
+            BlockEditAction.DismissDelete -> action.updateState {
+                it.copy(deleteConfirmationOpen = false, dontAskAgainChecked = false)
             }
         }
     }
@@ -69,8 +97,10 @@ class BlockEditViewModel(
 
 data class BlockEditState(
     val block: Block? = null,
-    val nameField: String = "",
-    val nameInitialized: Boolean = false,
+    val colorPickerOpen: Boolean = false,
+    val renameOpen: Boolean = false,
+    val deleteConfirmationOpen: Boolean = false,
+    val dontAskAgainChecked: Boolean = false,
 )
 
 sealed interface BlockEditEvent {
@@ -79,8 +109,15 @@ sealed interface BlockEditEvent {
 
 sealed interface BlockEditAction {
     data class Receive(val block: Block) : BlockEditAction
-    data class Rename(val name: String) : BlockEditAction
-    data class AdjustSeconds(val delta: Int) : BlockEditAction
+    data class SetDurationSeconds(val seconds: Int) : BlockEditAction
     data class SetColor(val argb: Int) : BlockEditAction
-    data object Delete : BlockEditAction
+    data object OpenColorPicker : BlockEditAction
+    data object DismissColorPicker : BlockEditAction
+    data object OpenRename : BlockEditAction
+    data class CommitRename(val name: String) : BlockEditAction
+    data object DismissRename : BlockEditAction
+    data object RequestDelete : BlockEditAction
+    data class ToggleDontAskAgain(val checked: Boolean) : BlockEditAction
+    data object ConfirmDelete : BlockEditAction
+    data object DismissDelete : BlockEditAction
 }

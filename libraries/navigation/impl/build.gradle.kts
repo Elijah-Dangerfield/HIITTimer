@@ -15,6 +15,7 @@ kotlin {
             implementation(projects.libraries.ui)
             implementation(projects.libraries.flowroutines)
             implementation(projects.libraries.hiittimer)
+            implementation(projects.features.settings)
             api(libs.jetbrains.navigation.compose)
             implementation(libs.kotlinx.serialization.json)
         }

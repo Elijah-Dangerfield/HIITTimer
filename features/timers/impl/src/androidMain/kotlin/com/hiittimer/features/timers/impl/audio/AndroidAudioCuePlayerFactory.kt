@@ -38,6 +38,7 @@ class AndroidAudioCuePlayer(
         tts = TextToSpeech(context.applicationContext) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.getDefault()
+                tts?.setSpeechRate(1.1f)
                 tts?.setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -83,7 +84,12 @@ class AndroidAudioCuePlayer(
             RunnerCue.Finish -> "Done"
         }
         if (ttsReady) {
-            tts?.speak(phrase, TextToSpeech.QUEUE_ADD, null, phrase)
+            val queueMode = when (cue) {
+                is RunnerCue.BlockStart -> TextToSpeech.QUEUE_FLUSH
+                RunnerCue.Finish -> TextToSpeech.QUEUE_FLUSH
+                else -> TextToSpeech.QUEUE_ADD
+            }
+            tts?.speak(phrase, queueMode, null, phrase)
         } else {
             playBeep(cue)
         }

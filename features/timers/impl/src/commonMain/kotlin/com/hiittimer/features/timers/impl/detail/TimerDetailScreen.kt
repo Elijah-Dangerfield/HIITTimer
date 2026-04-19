@@ -1,8 +1,10 @@
 @file:Suppress("DEPRECATION")
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package com.dangerfield.hiittimer.features.timers.impl.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,37 +16,82 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dangerfield.hiittimer.features.timers.Block
+import com.dangerfield.hiittimer.features.timers.BlockRole
 import com.dangerfield.hiittimer.features.timers.Timer
-import com.dangerfield.hiittimer.libraries.ui.components.HorizontalDivider
-import com.dangerfield.hiittimer.libraries.ui.components.ListItem
-import com.dangerfield.hiittimer.libraries.ui.components.ListItemAccessory
+import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
+import com.dangerfield.hiittimer.libraries.ui.PreviewContent
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import kotlin.time.Duration.Companion.seconds
+import com.dangerfield.hiittimer.libraries.ui.components.DropdownMenu
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
-import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonPrimary
+import com.dangerfield.hiittimer.libraries.ui.components.Surface
+import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonDanger
+import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonGhost
+import com.dangerfield.hiittimer.libraries.ui.components.checkbox.Checkbox
+import com.dangerfield.hiittimer.libraries.ui.components.dialog.Dialog
+import com.dangerfield.hiittimer.libraries.ui.components.dialog.rememberDialogState
+import com.dangerfield.hiittimer.libraries.ui.components.icon.Icon
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton
+import com.dangerfield.hiittimer.libraries.ui.components.icon.IconSize
 import com.dangerfield.hiittimer.libraries.ui.components.icon.Icons
+import com.dangerfield.hiittimer.libraries.ui.components.text.BasicTextField
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.libraries.ui.system.color.ColorResource
+import com.dangerfield.hiittimer.libraries.ui.fadingEdge
 import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.Dimension
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
+
+private const val QUICK_ADJUST_SECONDS = 15
+
+private sealed interface DetailItem {
+    data object Hero : DetailItem
+    data object Rounds : DetailItem
+    data class SectionHeader(val title: String) : DetailItem
+    data class BlockRow(val block: Block) : DetailItem
+    data class AddRow(val role: BlockRole, val label: String) : DetailItem
+}
 
 @Composable
 fun TimerDetailScreen(
     viewModel: TimerDetailViewModel,
+    isNew: Boolean = false,
     onBack: () -> Unit,
     onStart: (String) -> Unit,
-    onEdit: (String) -> Unit,
+    onOpenBlock: (timerId: String, blockId: String) -> Unit,
     onOpenDuplicate: (String) -> Unit,
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
@@ -53,58 +100,108 @@ fun TimerDetailScreen(
         viewModel.eventFlow.collect { event ->
             when (event) {
                 is TimerDetailEvent.Start -> onStart(event.timerId)
-                is TimerDetailEvent.Edit -> onEdit(event.timerId)
+                is TimerDetailEvent.OpenBlock -> onOpenBlock(event.timerId, event.blockId)
                 is TimerDetailEvent.OpenDuplicate -> onOpenDuplicate(event.newTimerId)
                 TimerDetailEvent.Close -> onBack()
             }
         }
     }
 
-    val timer = state.timer
+    TimerDetailContent(
+        state = state,
+        isNew = isNew,
+        onBack = onBack,
+        onDuplicate = { viewModel.takeAction(TimerDetailAction.Duplicate) },
+        onDelete = { viewModel.takeAction(TimerDetailAction.Delete) },
+        onRename = { viewModel.takeAction(TimerDetailAction.RenameTimer(it)) },
+        onCycleChange = { viewModel.takeAction(TimerDetailAction.ChangeCycleCount(it)) },
+        onStart = { viewModel.takeAction(TimerDetailAction.Start) },
+        onOpenBlock = { viewModel.takeAction(TimerDetailAction.OpenBlock(it)) },
+        onAdjust = { id, delta -> viewModel.takeAction(TimerDetailAction.AdjustBlockDuration(id, delta)) },
+        onRequestDeleteBlock = { viewModel.takeAction(TimerDetailAction.RequestDeleteBlock(it)) },
+        onReorder = { viewModel.takeAction(TimerDetailAction.ReorderBlocks(it)) },
+        onAddBlock = { role -> viewModel.takeAction(TimerDetailAction.AddBlock(role)) },
+        onToggleDontAsk = { viewModel.takeAction(TimerDetailAction.ToggleDontAskAgain(it)) },
+        onConfirmDeleteBlock = { viewModel.takeAction(TimerDetailAction.ConfirmDeleteBlock) },
+        onDismissDeleteBlock = { viewModel.takeAction(TimerDetailAction.DismissDeleteBlock) },
+    )
+}
 
+@Composable
+private fun TimerDetailContent(
+    state: TimerDetailState,
+    isNew: Boolean,
+    onBack: () -> Unit,
+    onDuplicate: () -> Unit,
+    onDelete: () -> Unit,
+    onRename: (String) -> Unit,
+    onCycleChange: (Int) -> Unit,
+    onStart: () -> Unit,
+    onOpenBlock: (String) -> Unit,
+    onAdjust: (String, Int) -> Unit,
+    onRequestDeleteBlock: (String) -> Unit,
+    onReorder: (List<String>) -> Unit,
+    onAddBlock: (BlockRole) -> Unit,
+    onToggleDontAsk: (Boolean) -> Unit,
+    onConfirmDeleteBlock: () -> Unit,
+    onDismissDeleteBlock: () -> Unit,
+) {
+    val timer = state.timer
+    val lazyListState = rememberLazyListState()
+    val titleInHeader by remember {
+        derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
+    }
     Screen(modifier = Modifier.fillMaxSize()) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Header(
                 onBack = onBack,
-                onEdit = { viewModel.takeAction(TimerDetailAction.Edit) },
-                onDuplicate = { viewModel.takeAction(TimerDetailAction.Duplicate) },
-                onDelete = { viewModel.takeAction(TimerDetailAction.Delete) },
+                onDuplicate = onDuplicate,
+                onDelete = onDelete,
                 enabled = timer != null,
+                title = timer?.name?.ifBlank { "Untitled" }.orEmpty(),
+                titleVisible = titleInHeader,
             )
 
             if (timer == null) return@Column
 
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                TitleBlock(timer)
-
-                Spacer(modifier = Modifier.height(Dimension.D900))
-
-                BlocksSection(blocks = timer.blocks)
-
-                Spacer(modifier = Modifier.height(Dimension.D1500))
-            }
-
-            StartFooter(
-                enabled = timer.blocks.isNotEmpty(),
-                onStart = { viewModel.takeAction(TimerDetailAction.Start) },
+            DetailList(
+                timer = timer,
+                nameField = state.nameField,
+                isNew = isNew,
+                lazyListState = lazyListState,
+                onRename = onRename,
+                onCycleChange = onCycleChange,
+                onStart = onStart,
+                onOpenBlock = onOpenBlock,
+                onAdjust = onAdjust,
+                onRequestDeleteBlock = onRequestDeleteBlock,
+                onReorder = onReorder,
+                onAddBlock = onAddBlock,
+                modifier = Modifier.weight(1f),
             )
         }
+    }
+
+    if (state.pendingDeleteBlockId != null) {
+        DeleteBlockConfirmationDialog(
+            dontAskAgain = state.dontAskAgainChecked,
+            onToggleDontAsk = onToggleDontAsk,
+            onConfirm = onConfirmDeleteBlock,
+            onDismiss = onDismissDeleteBlock,
+        )
     }
 }
 
 @Composable
 private fun Header(
     onBack: () -> Unit,
-    onEdit: () -> Unit,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit,
     enabled: Boolean,
+    title: String,
+    titleVisible: Boolean,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -112,140 +209,703 @@ private fun Header(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(icon = Icons.ArrowBack("Back"), onClick = onBack)
-        Spacer(modifier = Modifier.weight(1f))
-        IconButton(
-            icon = Icons.Copy("Duplicate"),
-            onClick = onDuplicate,
-            enabled = enabled,
-        )
-        IconButton(
-            icon = Icons.Delete("Delete"),
-            onClick = onDelete,
-            enabled = enabled,
-        )
-        IconButton(
-            icon = Icons.Pencil("Edit"),
-            onClick = onEdit,
-            enabled = enabled,
-        )
+        Box(modifier = Modifier.weight(1f).padding(horizontal = Dimension.D400)) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = titleVisible,
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { it / 2 },
+            ) {
+                Text(
+                    text = title,
+                    typography = AppTheme.typography.Heading.H700,
+                    color = AppTheme.colors.text,
+                    maxLines = 1,
+                )
+            }
+        }
+        Box {
+            IconButton(
+                icon = Icons.MoreVert("More"),
+                onClick = { menuOpen = true },
+                enabled = enabled,
+            )
+            DropdownMenu(
+                expanded = menuOpen,
+                onDismissRequest = { menuOpen = false },
+                modifier = Modifier.background(AppTheme.colors.surfacePrimary.color),
+            ) {
+                MenuRow(
+                    icon = Icons.Copy("Duplicate"),
+                    label = "Duplicate",
+                    onClick = { menuOpen = false; onDuplicate() },
+                )
+                MenuRow(
+                    icon = Icons.Delete("Delete"),
+                    label = "Delete timer",
+                    onClick = { menuOpen = false; onDelete() },
+                    destructive = true,
+                )
+            }
+        }
     }
-    HorizontalDivider()
 }
 
 @Composable
-private fun TitleBlock(timer: Timer) {
+private fun MenuRow(
+    icon: com.dangerfield.hiittimer.libraries.ui.components.icon.IconResource,
+    label: String,
+    onClick: () -> Unit,
+    destructive: Boolean = false,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = Dimension.D600, vertical = Dimension.D500),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            icon = icon,
+            size = IconSize.Small,
+            color = if (destructive) AppTheme.colors.danger else AppTheme.colors.onSurfacePrimary,
+        )
+        Spacer(modifier = Modifier.size(Dimension.D500))
+        Text(
+            text = label,
+            typography = AppTheme.typography.Body.B500,
+            color = if (destructive) AppTheme.colors.danger else AppTheme.colors.onSurfacePrimary,
+        )
+    }
+}
+
+@Composable
+private fun DetailList(
+    timer: Timer,
+    nameField: String,
+    isNew: Boolean,
+    lazyListState: androidx.compose.foundation.lazy.LazyListState,
+    onRename: (String) -> Unit,
+    onCycleChange: (Int) -> Unit,
+    onStart: () -> Unit,
+    onOpenBlock: (String) -> Unit,
+    onAdjust: (String, Int) -> Unit,
+    onRequestDeleteBlock: (String) -> Unit,
+    onReorder: (List<String>) -> Unit,
+    onAddBlock: (BlockRole) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val items: List<DetailItem> = remember(timer) { buildDetailItems(timer) }
+    val keyFor: (Int) -> Any = { idx -> keyForItem(items[idx], idx) }
+    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        val fromItem = items.getOrNull(from.index) as? DetailItem.BlockRow ?: return@rememberReorderableLazyListState
+        val toItem = items.getOrNull(to.index) as? DetailItem.BlockRow ?: return@rememberReorderableLazyListState
+        if (fromItem.block.role != toItem.block.role) return@rememberReorderableLazyListState
+
+        val ids = timer.blocks.map { it.id }.toMutableList()
+        val fromGlobal = ids.indexOf(fromItem.block.id)
+        val toGlobal = ids.indexOf(toItem.block.id)
+        if (fromGlobal < 0 || toGlobal < 0) return@rememberReorderableLazyListState
+        val moved = ids.removeAt(fromGlobal)
+        ids.add(toGlobal, moved)
+        onReorder(ids)
+    }
+
+    LazyColumn(
+        modifier = modifier
+            .fillMaxWidth()
+            .fadingEdge(lazyListState),
+        state = lazyListState,
+        contentPadding = PaddingValues(
+            start = Dimension.D700,
+            end = Dimension.D700,
+            top = Dimension.D400,
+            bottom = Dimension.D1500,
+        ),
+        verticalArrangement = Arrangement.spacedBy(Dimension.D500),
+    ) {
+        items.forEachIndexed { index, item ->
+            when (item) {
+                DetailItem.Hero -> item(key = "hero") {
+                    Hero(
+                        timer = timer,
+                        nameField = nameField,
+                        isNew = isNew,
+                        onRename = onRename,
+                        onStart = onStart,
+                    )
+                }
+                DetailItem.Rounds -> item(key = "rounds") {
+                    RoundsStepper(
+                        count = timer.cycleCount,
+                        onDecrement = { onCycleChange(timer.cycleCount - 1) },
+                        onIncrement = { onCycleChange(timer.cycleCount + 1) },
+                    )
+                }
+                is DetailItem.SectionHeader -> item(key = "hdr-${item.title}") {
+                    Text(
+                        text = item.title,
+                        typography = AppTheme.typography.Label.L400,
+                        color = AppTheme.colors.textSecondary,
+                        modifier = Modifier.padding(top = Dimension.D400, bottom = Dimension.D100),
+                    )
+                }
+                is DetailItem.BlockRow -> item(key = "block-${item.block.id}") {
+                    val siblingCount = when (item.block.role) {
+                        BlockRole.Warmup -> timer.warmupBlocks.size
+                        BlockRole.Cycle -> timer.cycleBlocks.size
+                        BlockRole.Cooldown -> timer.cooldownBlocks.size
+                    }
+                    val reorderable = siblingCount > 1
+                    ReorderableItem(state = reorderableState, key = "block-${item.block.id}") { dragging ->
+                        BlockCard(
+                            block = item.block,
+                            dragging = dragging,
+                            reorderable = reorderable,
+                            onTap = { onOpenBlock(item.block.id) },
+                            onAdjust = { delta -> onAdjust(item.block.id, delta) },
+                            onRequestDelete = { onRequestDeleteBlock(item.block.id) },
+                            dragHandleModifier = if (reorderable) Modifier.longPressReorderable(this) else Modifier,
+                        )
+                    }
+                }
+                is DetailItem.AddRow -> item(key = "add-${item.role.name}") {
+                    AddBlockRow(label = item.label, onClick = { onAddBlock(item.role) })
+                }
+            }
+        }
+    }
+}
+
+private fun buildDetailItems(timer: Timer): List<DetailItem> = buildList {
+    add(DetailItem.Hero)
+
+    add(DetailItem.SectionHeader("WARM UP"))
+    timer.warmupBlocks.forEach { add(DetailItem.BlockRow(it)) }
+    add(DetailItem.AddRow(BlockRole.Warmup, "Add warm up"))
+
+    add(DetailItem.Rounds)
+    add(DetailItem.SectionHeader("BLOCKS"))
+    timer.cycleBlocks.forEach { add(DetailItem.BlockRow(it)) }
+    add(DetailItem.AddRow(BlockRole.Cycle, "Add block"))
+
+    add(DetailItem.SectionHeader("COOL DOWN"))
+    timer.cooldownBlocks.forEach { add(DetailItem.BlockRow(it)) }
+    add(DetailItem.AddRow(BlockRole.Cooldown, "Add cool down"))
+}
+
+private fun keyForItem(item: DetailItem, index: Int): Any = when (item) {
+    DetailItem.Hero -> "hero"
+    DetailItem.Rounds -> "rounds"
+    is DetailItem.SectionHeader -> "hdr-${item.title}"
+    is DetailItem.BlockRow -> "block-${item.block.id}"
+    is DetailItem.AddRow -> "add-${item.role.name}"
+}
+
+@Composable
+private fun Hero(
+    timer: Timer,
+    nameField: String,
+    isNew: Boolean,
+    onRename: (String) -> Unit,
+    onStart: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Dimension.D700, vertical = Dimension.D900),
+            .clip(RoundedCornerShape(24.dp))
+            .background(AppTheme.colors.surfacePrimary.color)
+            .padding(horizontal = Dimension.D900, vertical = Dimension.D1000),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = timer.name.ifBlank { "Untitled" },
-            typography = AppTheme.typography.Heading.H1000,
+        InlineTitleField(
+            value = nameField,
+            onValueChange = onRename,
+            placeholder = "Untitled",
+            requestFocus = isNew,
         )
-        Spacer(modifier = Modifier.height(Dimension.D500))
-        Row(horizontalArrangement = Arrangement.spacedBy(Dimension.D700)) {
-            Stat(label = "Blocks", value = timer.blocks.size.toString())
-            Stat(label = "Rounds", value = "${timer.cycleCount}x")
-            Stat(label = "Total", value = formatDuration(timer.totalDuration.inWholeSeconds.toInt()))
-        }
-    }
-    HorizontalDivider()
-}
 
-@Composable
-private fun Stat(label: String, value: String) {
-    Column {
+        Spacer(modifier = Modifier.height(Dimension.D700))
+
         Text(
-            text = label.uppercase(),
-            typography = AppTheme.typography.Label.L400,
+            text = "TOTAL TIME",
+            typography = AppTheme.typography.Label.L300,
             color = AppTheme.colors.textSecondary,
         )
         Spacer(modifier = Modifier.height(Dimension.D200))
-        Text(text = value, typography = AppTheme.typography.Heading.H700)
-    }
-}
-
-@Composable
-private fun BlocksSection(blocks: List<Block>) {
-    Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "BLOCKS",
-            typography = AppTheme.typography.Label.L400,
-            color = AppTheme.colors.textSecondary,
-            modifier = Modifier.padding(
-                start = Dimension.D700,
-                end = Dimension.D700,
-                bottom = Dimension.D400,
-            ),
+            text = formatClock(timer.totalDuration.inWholeSeconds.toInt()),
+            typography = AppTheme.typography.Display.D1500,
+            color = AppTheme.colors.onSurfacePrimary,
         )
-        if (blocks.isEmpty()) {
-            Text(
-                text = "No blocks yet. Tap the pencil to add some.",
-                typography = AppTheme.typography.Body.B500,
-                color = AppTheme.colors.textSecondary,
-                modifier = Modifier.padding(horizontal = Dimension.D700),
-            )
-            return
+
+        if (timer.blocks.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(Dimension.D500))
+            BlockStrip(blocks = timer.blocks)
         }
-        blocks.forEachIndexed { index, block ->
-            ListItem(
-                leadingContent = { ColorDot(argb = block.colorArgb) },
-                headlineContent = {
-                    Text(text = block.name, typography = AppTheme.typography.Body.B600)
-                },
-                accessory = ListItemAccessory.Text(
-                    text = formatDuration(block.duration.inWholeSeconds.toInt()),
-                    typography = AppTheme.typography.Body.B500,
-                    color = AppTheme.colors.textSecondary,
-                ),
-                showDivider = index != blocks.lastIndex,
-                contentPadding = PaddingValues(
-                    horizontal = Dimension.D700,
-                    vertical = Dimension.D200,
-                ),
-            )
-        }
+
+        Spacer(modifier = Modifier.height(Dimension.D900))
+
+        PlayButton(
+            enabled = timer.cycleBlocks.isNotEmpty() || timer.warmupBlocks.isNotEmpty() || timer.cooldownBlocks.isNotEmpty(),
+            onClick = onStart,
+        )
     }
 }
 
 @Composable
-private fun ColorDot(argb: Int) {
+private fun PlayButton(enabled: Boolean, onClick: () -> Unit) {
+    val bg = if (enabled) AppTheme.colors.accentPrimary else AppTheme.colors.surfaceDisabled
+    val fg = if (enabled) AppTheme.colors.onAccentPrimary else AppTheme.colors.textDisabled
     Box(
         modifier = Modifier
-            .size(Dimension.D900)
+            .size(88.dp)
             .clip(CircleShape)
-            .background(Color(argb)),
-    )
+            .background(bg.color)
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon = Icons.Play("Start workout"),
+            size = IconSize.Largest,
+            color = fg,
+        )
+    }
 }
 
 @Composable
-private fun StartFooter(enabled: Boolean, onStart: () -> Unit) {
-    HorizontalDivider()
+private fun InlineTitleField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    requestFocus: Boolean = false,
+) {
+    val focusRequester = remember { FocusRequester() }
+    
+    LaunchedEffect(requestFocus) {
+        if (requestFocus) {
+            focusRequester.requestFocus()
+        }
+    }
+    
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        if (value.isEmpty()) {
+            Text(
+                text = placeholder,
+                typography = AppTheme.typography.Heading.H800,
+                color = AppTheme.colors.textSecondary,
+                textAlign = TextAlign.Center,
+            )
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+            singleLine = true,
+            typographyToken = AppTheme.typography.Heading.H800,
+            color = AppTheme.colors.onSurfacePrimary.color,
+            keyboardOptions = KeyboardOptions.Default.copy(
+                capitalization = KeyboardCapitalization.Words,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun RoundsStepper(
+    count: Int,
+    onDecrement: () -> Unit,
+    onIncrement: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = Dimension.D500),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "ROUNDS",
+            typography = AppTheme.typography.Label.L300,
+            color = AppTheme.colors.textSecondary,
+        )
+        Spacer(modifier = Modifier.height(Dimension.D300))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimension.D700),
+        ) {
+            StepperCircle(
+                icon = Icons.ChevronLeft("Decrease rounds"),
+                onClick = onDecrement,
+                enabled = count > 1,
+            )
+            Text(
+                text = "${count}x",
+                typography = AppTheme.typography.Display.D1000,
+                color = AppTheme.colors.text,
+            )
+            StepperCircle(
+                icon = Icons.ChevronRight("Increase rounds"),
+                onClick = onIncrement,
+                enabled = count < 99,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StepperCircle(
+    icon: com.dangerfield.hiittimer.libraries.ui.components.icon.IconResource,
+    onClick: () -> Unit,
+    enabled: Boolean,
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(AppTheme.colors.surfacePrimary.color)
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon = icon,
+            size = IconSize.Small,
+            color = if (enabled) AppTheme.colors.onSurfacePrimary else AppTheme.colors.onSurfaceDisabled,
+        )
+    }
+}
+
+@Composable
+private fun BlockStrip(blocks: List<Block>) {
+    val totalSeconds = blocks.sumOf { it.duration.inWholeSeconds.toInt() }.coerceAtLeast(1)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(8.dp)
+            .clip(RoundedCornerShape(4.dp)),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        blocks.forEach { block ->
+            val weight = (block.duration.inWholeSeconds.toFloat() / totalSeconds.toFloat())
+                .coerceAtLeast(0.02f)
+            Box(
+                modifier = Modifier
+                    .weight(weight)
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .background(Color(block.colorArgb)),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BlockCard(
+    block: Block,
+    dragging: Boolean,
+    reorderable: Boolean,
+    onTap: () -> Unit,
+    onAdjust: (Int) -> Unit,
+    onRequestDelete: () -> Unit,
+    dragHandleModifier: Modifier,
+) {
+    val color = Color(block.colorArgb)
+    val cardBg = lerp(
+        color,
+        Color.White,
+        if (dragging) 0.15f else 0.28f,
+    )
+
+    val content: @Composable () -> Unit = {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(cardBg)
+                .clickable(enabled = !dragging) { onTap() }
+                .padding(horizontal = Dimension.D700, vertical = Dimension.D700),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val labelColor = ColorPalette.onColorFor(cardBg)
+                Text(
+                    text = block.name.ifBlank { "Block" },
+                    typography = AppTheme.typography.Heading.H700,
+                    color = ColorResource.FromColor(labelColor, "block-label"),
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                )
+                if (reorderable) {
+                    Box(modifier = dragHandleModifier) {
+                        Icon(
+                            icon = Icons.DragHandle("Drag to reorder"),
+                            size = IconSize.Small,
+                            color = ColorResource.FromColor(labelColor.copy(alpha = 0.6f), "drag-handle"),
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(Dimension.D400))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                QuickAdjustButton(
+                    label = "−",
+                    onClick = { onAdjust(-QUICK_ADJUST_SECONDS) },
+                    enabled = block.duration.inWholeSeconds.toInt() > QUICK_ADJUST_SECONDS,
+                )
+                Text(
+                    text = formatClock(block.duration.inWholeSeconds.toInt()),
+                    typography = AppTheme.typography.Display.D1000,
+                    color = AppTheme.colors.onSurfacePrimary,
+                )
+                QuickAdjustButton(
+                    label = "+",
+                    onClick = { onAdjust(QUICK_ADJUST_SECONDS) },
+                )
+            }
+        }
+    }
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) onRequestDelete()
+            false
+        },
+    )
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(
-                horizontal = Dimension.D700,
-                vertical = Dimension.D600,
-            ),
+            .clip(RoundedCornerShape(20.dp))
+            .background(AppTheme.colors.danger.color),
     ) {
-        ButtonPrimary(
-            onClick = onStart,
-            enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromStartToEnd = false,
+            enableDismissFromEndToStart = true,
+            backgroundContent = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(AppTheme.colors.danger.color)
+                        .padding(horizontal = Dimension.D900),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    Icon(
+                        icon = Icons.Delete("Delete"),
+                        size = IconSize.Medium,
+                        color = AppTheme.colors.onAccentPrimary,
+                    )
+                }
+            },
         ) {
-            Text(text = "Start workout")
+            content()
         }
     }
 }
 
-private fun formatDuration(totalSeconds: Int): String {
+@Composable
+private fun QuickAdjustButton(label: String, onClick: () -> Unit, enabled: Boolean = true) {
+    val bg = if (enabled) AppTheme.colors.surfacePrimary else AppTheme.colors.surfaceDisabled
+    val fg = if (enabled) AppTheme.colors.onSurfacePrimary else AppTheme.colors.textDisabled
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(bg.color)
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            typography = AppTheme.typography.Heading.H700,
+            color = fg,
+        )
+    }
+}
+
+@Composable
+private fun AddBlockRow(label: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(AppTheme.colors.surfacePrimary.color)
+            .clickable { onClick() }
+            .padding(horizontal = Dimension.D700, vertical = Dimension.D700),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            icon = Icons.Add("Add"),
+            size = IconSize.Small,
+            color = AppTheme.colors.accentPrimary,
+        )
+        Spacer(modifier = Modifier.size(Dimension.D400))
+        Text(
+            text = label,
+            typography = AppTheme.typography.Body.B600.SemiBold,
+            color = AppTheme.colors.accentPrimary,
+        )
+    }
+}
+
+@Composable
+private fun DeleteBlockConfirmationDialog(
+    dontAskAgain: Boolean,
+    onToggleDontAsk: (Boolean) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val dialogState = rememberDialogState()
+    Dialog(state = dialogState, onDismissRequest = onDismiss) {
+        Surface(
+            color = AppTheme.colors.surfacePrimary,
+            contentColor = AppTheme.colors.onSurfacePrimary,
+            radius = com.dangerfield.hiittimer.system.Radii.Card,
+            contentPadding = PaddingValues(Dimension.D700),
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Delete this block?",
+                    typography = AppTheme.typography.Heading.H700,
+                )
+                Spacer(modifier = Modifier.height(Dimension.D400))
+                Text(
+                    text = "You can't undo this.",
+                    typography = AppTheme.typography.Body.B500,
+                    color = AppTheme.colors.textSecondary,
+                )
+                Spacer(modifier = Modifier.height(Dimension.D700))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onToggleDontAsk(!dontAskAgain) }
+                        .padding(vertical = Dimension.D300),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = dontAskAgain, onCheckedChange = { onToggleDontAsk(it) })
+                    Spacer(modifier = Modifier.size(Dimension.D400))
+                    Text(
+                        text = "Don't ask again",
+                        typography = AppTheme.typography.Body.B500,
+                    )
+                }
+                Spacer(modifier = Modifier.height(Dimension.D500))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
+                ) {
+                    ButtonGhost(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                        Text("Cancel")
+                    }
+                    ButtonDanger(onClick = onConfirm, modifier = Modifier.weight(1f)) {
+                        Text("Delete")
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatClock(totalSeconds: Int): String {
     val mins = totalSeconds / 60
     val secs = totalSeconds % 60
-    return when {
-        mins > 0 && secs > 0 -> "${mins}m ${secs}s"
-        mins > 0 -> "${mins}m"
-        else -> "${secs}s"
+    return "${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}"
+}
+
+@Composable
+private fun Modifier.longPressReorderable(
+    scope: sh.calvin.reorderable.ReorderableCollectionItemScope,
+): Modifier = with(scope) {
+    this@longPressReorderable.draggableHandle()
+}
+
+private val sampleTimer: Timer = Timer(
+    id = "sample",
+    name = "Tabata",
+    cycleCount = 8,
+    blocks = listOf(
+        Block("w1", "Warm up", 60.seconds, ColorPalette.warmupArgb, BlockRole.Warmup),
+        Block("c1", "Work", 30.seconds, ColorPalette.defaultWorkArgb, BlockRole.Cycle),
+        Block("c2", "Rest", 15.seconds, ColorPalette.defaultRestArgb, BlockRole.Cycle),
+        Block("d1", "Cool down", 90.seconds, ColorPalette.lowIntensityArgb, BlockRole.Cooldown),
+    ),
+)
+
+@Composable
+@Preview
+private fun TimerDetailContentPreview() {
+    PreviewContent {
+        TimerDetailContent(
+            state = TimerDetailState(timer = sampleTimer, nameField = sampleTimer.name, loading = false),
+            isNew = false,
+            onBack = {}, onDuplicate = {}, onDelete = {},
+            onRename = {}, onCycleChange = {}, onStart = {},
+            onOpenBlock = {}, onAdjust = { _, _ -> }, onRequestDeleteBlock = {},
+            onReorder = {}, onAddBlock = {},
+            onToggleDontAsk = {}, onConfirmDeleteBlock = {}, onDismissDeleteBlock = {},
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun TimerDetailContentEmptyPreview() {
+    val empty = sampleTimer.copy(name = "", blocks = emptyList())
+    PreviewContent {
+        TimerDetailContent(
+            state = TimerDetailState(timer = empty, nameField = "", loading = false),
+            isNew = true,
+            onBack = {}, onDuplicate = {}, onDelete = {},
+            onRename = {}, onCycleChange = {}, onStart = {},
+            onOpenBlock = {}, onAdjust = { _, _ -> }, onRequestDeleteBlock = {},
+            onReorder = {}, onAddBlock = {},
+            onToggleDontAsk = {}, onConfirmDeleteBlock = {}, onDismissDeleteBlock = {},
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun TimerDetailContentDeletePromptPreview() {
+    PreviewContent {
+        TimerDetailContent(
+            state = TimerDetailState(
+                timer = sampleTimer,
+                nameField = sampleTimer.name,
+                loading = false,
+                pendingDeleteBlockId = "c1",
+            ),
+            isNew = false,
+            onBack = {}, onDuplicate = {}, onDelete = {},
+            onRename = {}, onCycleChange = {}, onStart = {},
+            onOpenBlock = {}, onAdjust = { _, _ -> }, onRequestDeleteBlock = {},
+            onReorder = {}, onAddBlock = {},
+            onToggleDontAsk = {}, onConfirmDeleteBlock = {}, onDismissDeleteBlock = {},
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun BlockCardSwatchesPreview() {
+    PreviewContent {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(Dimension.D500),
+            verticalArrangement = Arrangement.spacedBy(Dimension.D400),
+        ) {
+            ColorPalette.swatches.take(6).forEachIndexed { i, argb ->
+                BlockCard(
+                    block = Block("p$i", "Block ${i + 1}", 45.seconds, argb.toInt()),
+                    dragging = false,
+                    reorderable = true,
+                    onTap = {},
+                    onAdjust = {},
+                    onRequestDelete = {},
+                    dragHandleModifier = Modifier,
+                )
+            }
+        }
     }
 }

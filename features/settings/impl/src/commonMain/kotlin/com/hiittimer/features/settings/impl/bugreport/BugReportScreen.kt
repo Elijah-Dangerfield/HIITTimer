@@ -1,4 +1,4 @@
-package com.dangerfield.hiittimer.features.home.impl.feedback
+package com.dangerfield.hiittimer.features.settings.impl.bugreport
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,6 +22,8 @@ import com.dangerfield.hiittimer.system.VerticalSpacerD1000
 import com.dangerfield.hiittimer.system.VerticalSpacerD500
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
+import com.dangerfield.hiittimer.libraries.ui.components.SectionCard
+import com.dangerfield.hiittimer.libraries.ui.components.SummaryRow
 import com.dangerfield.hiittimer.libraries.ui.components.button.Button
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonSize
 import com.dangerfield.hiittimer.libraries.ui.components.header.TopBar
@@ -30,12 +32,12 @@ import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.libraries.ui.screenContentPadding
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
-private const val FEEDBACK_CHAR_LIMIT = 200
+private const val BUG_REPORT_CHAR_LIMIT = 180
 
 @Composable
-fun FeedbackScreen(
-    state: FeedbackState,
-    onAction: (FeedbackAction) -> Unit,
+fun BugReportScreen(
+    state: BugReportState,
+    onAction: (BugReportAction) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
@@ -45,8 +47,8 @@ fun FeedbackScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopBar(
-                 title = "Share Your Feedback",
-                onNavigateBack = { onAction(FeedbackAction.Back) }
+                title = "Report a Bug",
+                onNavigateBack = { onAction(BugReportAction.Back) }
             )
         }
     ) { paddingValues ->
@@ -62,19 +64,47 @@ fun FeedbackScreen(
         ) {
             VerticalSpacerD1000()
 
+            if (state.hasContext) {
+                SectionCard(title = "Captured details") {
+                    state.contextMessage?.let {
+                        Text(
+                            text = it,
+                            typography = AppTheme.typography.Body.B500,
+                            color = AppTheme.colors.danger
+                        )
+                    }
+
+                    state.errorCode?.let {
+                        SummaryRow(
+                            label = "Error code",
+                            value = "$it"
+                        )
+                    }
+
+                    state.logId?.let {
+                        SummaryRow(
+                            label = "Report id",
+                            value = it
+                        )
+                    }
+                }
+
+                VerticalSpacerD1000()
+            }
+
             Text(
-                text = "We'd love to hear from you",
+                text = "Help us understand what went wrong. We would love to fix it!",
                 typography = AppTheme.typography.Body.B700,
                 color = AppTheme.colors.textSecondary
             )
 
-            VerticalSpacerD500()
+            VerticalSpacerD1000()
 
             OutlinedTextField(
                 value = state.message,
                 onValueChange = { newValue ->
-                    val limited = newValue.take(FEEDBACK_CHAR_LIMIT)
-                    onAction(FeedbackAction.MessageChanged(limited))
+                    val limited = newValue.take(BUG_REPORT_CHAR_LIMIT)
+                    onAction(BugReportAction.MessageChanged(limited))
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -89,7 +119,7 @@ fun FeedbackScreen(
                     onSend = {
                         if (canSubmit) {
                             focusManager.clearFocus(force = true)
-                            onAction(FeedbackAction.Submit)
+                            onAction(BugReportAction.Submit)
                         }
                     }
                 )
@@ -103,14 +133,14 @@ fun FeedbackScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val messageLength = state.message.length
-                val counterColor = if (messageLength >= FEEDBACK_CHAR_LIMIT) {
+                val counterColor = if (messageLength >= BUG_REPORT_CHAR_LIMIT) {
                     AppTheme.colors.danger
                 } else {
                     AppTheme.colors.textSecondary
                 }
 
                 Text(
-                    text = "$messageLength/$FEEDBACK_CHAR_LIMIT",
+                    text = "$messageLength/$BUG_REPORT_CHAR_LIMIT",
                     color = counterColor,
                     typography = AppTheme.typography.Body.B500
                 )
@@ -134,7 +164,7 @@ fun FeedbackScreen(
                 onClick = {
                     focusManager.clearFocus(force = true)
                     if (canSubmit) {
-                        onAction(FeedbackAction.Submit)
+                        onAction(BugReportAction.Submit)
                     }
                 }
             ) {
@@ -148,26 +178,17 @@ fun FeedbackScreen(
 
 @Preview
 @Composable
-private fun FeedbackScreenPreviewDisabled() {
+private fun BugReportScreenPreview() {
     PreviewContent {
-        FeedbackScreen(
-            state = FeedbackState(
-                message = ""
+        BugReportScreen(
+            state = BugReportState(
+                message = "The shortcut sheet would not open.",
+                logId = "12356j32345k1",
+                errorCode = 1200,
+                contextMessage = "Something went wrong while loading."
             ),
             onAction = {}
         )
     }
 }
 
-@Preview
-@Composable
-private fun FeedbackScreenPreview() {
-    PreviewContent {
-        FeedbackScreen(
-            state = FeedbackState(
-                message = "I love this app!"
-            ),
-            onAction = {}
-        )
-    }
-}

@@ -1,4 +1,4 @@
-package com.dangerfield.hiittimer.features.home.impl.feedback
+package com.dangerfield.hiittimer.features.settings.impl.feedback
 
 import com.dangerfield.hiittimer.libraries.core.eitherWay
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
@@ -60,3 +60,4 @@ sealed interface FeedbackAction {
     data class MessageChanged(val value: String) : FeedbackAction
     data object Submit : FeedbackAction
 }
+
