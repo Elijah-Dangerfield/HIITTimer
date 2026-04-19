@@ -2,8 +2,12 @@ package com.dangerfield.hiittimer.features.timers.impl.audio
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.ToneGenerator
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import com.dangerfield.hiittimer.features.timers.SoundMode
@@ -27,6 +31,51 @@ class AndroidAudioCuePlayer(
     private var mode: SoundMode = SoundMode.Beeps,
 ) : AudioCuePlayer {
 
+    private val audioManager =
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val handler = Handler(Looper.getMainLooper())
+
+    private val focusAttributes: AudioAttributes =
+        AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+
+    private val focusRequest: AudioFocusRequest? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(focusAttributes)
+                .setWillPauseWhenDucked(false)
+                .setOnAudioFocusChangeListener({ })
+                .build()
+        } else {
+            null
+        }
+
+    private val abandonFocus = Runnable {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && focusRequest != null) {
+            audioManager.abandonAudioFocusRequest(focusRequest)
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(null)
+        }
+    }
+
+    private fun requestDucking(holdMs: Long) {
+        handler.removeCallbacks(abandonFocus)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && focusRequest != null) {
+            audioManager.requestAudioFocus(focusRequest)
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                null,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
+            )
+        }
+        handler.postDelayed(abandonFocus, holdMs)
+    }
+
     private val toneGen: ToneGenerator by lazy {
         ToneGenerator(AudioManager.STREAM_MUSIC, ToneVolume)
     }
@@ -39,12 +88,7 @@ class AndroidAudioCuePlayer(
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.getDefault()
                 tts?.setSpeechRate(1.1f)
-                tts?.setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build()
-                )
+                tts?.setAudioAttributes(focusAttributes)
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) = Unit
                     override fun onDone(utteranceId: String?) = Unit
@@ -62,8 +106,14 @@ class AndroidAudioCuePlayer(
     override fun play(cue: RunnerCue) {
         when (mode) {
             SoundMode.Off -> Unit
-            SoundMode.Beeps -> playBeep(cue)
-            SoundMode.Voice -> playVoice(cue)
+            SoundMode.Beeps -> {
+                requestDucking(FocusHoldShortMs)
+                playBeep(cue)
+            }
+            SoundMode.Voice -> {
+                requestDucking(FocusHoldVoiceMs)
+                playVoice(cue)
+            }
         }
     }
 
@@ -96,6 +146,8 @@ class AndroidAudioCuePlayer(
     }
 
     override fun release() {
+        handler.removeCallbacks(abandonFocus)
+        abandonFocus.run()
         runCatching { toneGen.release() }
         runCatching {
             tts?.stop()
@@ -108,5 +160,7 @@ class AndroidAudioCuePlayer(
         private const val ToneVolume = 80
         private const val ToneShortMs = 150
         private const val ToneLongMs = 300
+        private const val FocusHoldShortMs = 700L
+        private const val FocusHoldVoiceMs = 2500L
     }
 }
