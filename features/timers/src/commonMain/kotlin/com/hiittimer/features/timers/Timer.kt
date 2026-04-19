@@ -14,6 +14,8 @@ data class Timer(
     val cycleBlocks: List<Block> get() = blocks.filter { it.role == BlockRole.Cycle }
     val cooldownBlocks: List<Block> get() = blocks.filter { it.role == BlockRole.Cooldown }
 
+    val orderedBlocks: List<Block> get() = warmupBlocks + cycleBlocks + cooldownBlocks
+
     val cycleDuration: Duration
         get() = cycleBlocks.fold(Duration.ZERO) { acc, b -> acc + b.duration }
 
