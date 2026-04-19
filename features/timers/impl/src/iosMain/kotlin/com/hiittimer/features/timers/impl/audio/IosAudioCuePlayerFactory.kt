@@ -36,7 +36,12 @@ class IosAudioCuePlayer(
 
     private fun setupAudioSession() {
         val session = AVAudioSession.sharedInstance()
-        session.setCategory(AVAudioSessionCategoryPlayback, AVAudioSessionModeDefault, 0u, null)
+        session.setCategory(
+            AVAudioSessionCategoryPlayback,
+            AVAudioSessionModeDefault,
+            MIX_WITH_OTHERS or DUCK_OTHERS,
+            null,
+        )
         session.setActive(true, null)
     }
 
@@ -96,5 +101,8 @@ class IosAudioCuePlayer(
         private const val SHORT_BEEP: UInt = 1057u
         private const val LONG_BEEP: UInt = 1052u
         private const val FINISH_SOUND: UInt = 1025u
+
+        private const val MIX_WITH_OTHERS: UInt = 1u
+        private const val DUCK_OTHERS: UInt = 2u
     }
 }
