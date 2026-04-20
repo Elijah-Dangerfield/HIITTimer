@@ -80,9 +80,10 @@ private class ConfiguredTelemetry(
                 )
             )
             Sentry.configureScope {
-                it.setExtra("platform", config.platformTag)
-                it.setExtra("build_type", config.buildTypeTag)
-                it.setExtra("release_channel", BuildInfo.releaseChannel)
+                it.setTag("platform", config.platformTag)
+                it.setTag("component", config.componentTag)
+                it.setTag("build_type", config.buildTypeTag)
+                it.setTag("release_channel", BuildInfo.releaseChannel)
             }
             logger.i { scope ->
                 scope.extra("environment", config.environment)
@@ -155,10 +156,8 @@ private class ConfiguredTelemetry(
     }
 }
 
-private const val ANDROID_DEBUG_DSN_PLACEHOLDER = "https://527ff39be0de65d7d96cfc0976f34393@o4510490770079744.ingest.us.sentry.io/4510494550589440"
-private const val ANDROID_RELEASE_DSN_PLACEHOLDER = "https://0bc66272a354ec2a2c550ef435782ee4@o4510490770079744.ingest.us.sentry.io/4510494555832320"
-private const val IOS_DEBUG_DSN_PLACEHOLDER = "https://59d54ea15ef9826ecfe6e50835e1fa35@o4510490770079744.ingest.us.sentry.io/4510494554259456"
-private const val IOS_RELEASE_DSN_PLACEHOLDER = "https://af45ba8caf0a26ae529f08ba375df917@o4510490770079744.ingest.us.sentry.io/4510494557798400"
+private const val SENTRY_DSN =
+    "https://828c6f32480b818000dbb0c069029eb4@o327796.ingest.us.sentry.io/4511252532297728"
 
 data class SentryRuntimeConfig(
     val dsn: String,
@@ -169,6 +168,7 @@ data class SentryRuntimeConfig(
     val tracesSampleRate: Double?,
     val profilesSampleRate: Double?,
     val platformTag: String,
+    val componentTag: String,
     val buildTypeTag: String,
     val isDebugLoggingEnabled: Boolean,
     val logPolicy: LogPolicy,
@@ -188,17 +188,13 @@ data class SentryRuntimeConfig(
                 Platform.iOS -> "ios"
             }
             val buildTypeTag = buildInfo.buildType
-            val dsn = when (buildInfo.platform) {
-                Platform.Android -> if (buildInfo.isDebug) ANDROID_DEBUG_DSN_PLACEHOLDER else ANDROID_RELEASE_DSN_PLACEHOLDER
-                Platform.iOS -> if (buildInfo.isDebug) IOS_DEBUG_DSN_PLACEHOLDER else IOS_RELEASE_DSN_PLACEHOLDER
-            }
-            val environment = "${buildInfo.releaseChannel}-$platformTag-$buildTypeTag"
-            val release = "hiittimere@${buildInfo.versionName}+${buildInfo.buildNumber}"
+            val environment = if (buildInfo.isDebug) "development" else "production"
+            val release = "hiittimer@${buildInfo.versionName}+${buildInfo.buildNumber}"
             val tracesSampleRate = if (buildInfo.isDebug) 1.0 else 0.15
             val profilesSampleRate = if (buildInfo.isDebug) 1.0 else 0.05
             val breadcrumbLevel = if (buildInfo.isDebug) LogLevel.Debug else LogLevel.Info
             return SentryRuntimeConfig(
-                dsn = dsn,
+                dsn = SENTRY_DSN,
                 environment = environment,
                 release = release,
                 sendDefaultPii = false,
@@ -206,6 +202,7 @@ data class SentryRuntimeConfig(
                 tracesSampleRate = tracesSampleRate,
                 profilesSampleRate = profilesSampleRate,
                 platformTag = platformTag,
+                componentTag = "app",
                 buildTypeTag = buildTypeTag,
                 isDebugLoggingEnabled = false, // TODO link this to a QA option
                 logPolicy = LogPolicy(
@@ -218,9 +215,8 @@ data class SentryRuntimeConfig(
 
         fun forIosExtension(buildInfo: BuildInfo): SentryRuntimeConfig {
             val base = forApp(buildInfo)
-            val environment = "${buildInfo.releaseChannel}-ios-extension-${buildInfo.buildType}"
             return base.copy(
-                environment = environment,
+                componentTag = "ios-extension",
                 release = base.release + "-extension",
                 tracesSampleRate = if (buildInfo.isDebug) 0.25 else 0.05,
                 profilesSampleRate = null,
