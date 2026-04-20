@@ -12,16 +12,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dangerfield.hiittimer.features.timers.SoundMode
+import com.dangerfield.hiittimer.features.timers.SoundPack
 import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
 import com.dangerfield.hiittimer.libraries.ui.components.HorizontalDivider
 import com.dangerfield.hiittimer.libraries.ui.components.ListItemAccessory
 import com.dangerfield.hiittimer.libraries.ui.components.ListSection
 import com.dangerfield.hiittimer.libraries.ui.components.ListSectionItem
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
+import com.dangerfield.hiittimer.libraries.ui.components.Surface
+import com.dangerfield.hiittimer.system.Radii
+import kotlin.math.roundToInt
 import com.dangerfield.hiittimer.libraries.ui.components.icon.Icon
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconResource
@@ -74,6 +80,13 @@ fun SettingsScreen(
                             onClick = { viewModel.takeAction(SettingsAction.CycleSoundMode) },
                         ),
                         ListSectionItem(
+                            headlineText = "Sound pack",
+                            supportingText = soundPackSubtitle(state.soundPack),
+                            leadingContent = { SettingsIcon(Icons.Dot("Sound pack")) },
+                            accessory = ListItemAccessory.Text(state.soundPack.displayName),
+                            onClick = { viewModel.takeAction(SettingsAction.CycleSoundPack) },
+                        ),
+                        ListSectionItem(
                             headlineText = "Halfway callouts",
                             supportingText = "Cue at the midpoint of each block.",
                             leadingContent = { SettingsIcon(Icons.Dot("Halfway")) },
@@ -81,6 +94,33 @@ fun SettingsScreen(
                                 checked = state.halfwayCallouts,
                                 onCheckedChange = {
                                     viewModel.takeAction(SettingsAction.SetHalfwayCallouts(it))
+                                },
+                            ),
+                            onClick = null,
+                        ),
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(Dimension.D500))
+
+                VolumeRow(
+                    volume = state.cueVolume,
+                    onVolumeChange = { viewModel.takeAction(SettingsAction.SetCueVolume(it)) },
+                )
+
+                Spacer(modifier = Modifier.height(Dimension.D1000))
+
+                ListSection(
+                    title = "Feedback",
+                    items = listOf(
+                        ListSectionItem(
+                            headlineText = "Haptics",
+                            supportingText = "Vibrate on transitions and countdown.",
+                            leadingContent = { SettingsIcon(Icons.Dot("Haptics")) },
+                            accessory = ListItemAccessory.Switch(
+                                checked = state.hapticsEnabled,
+                                onCheckedChange = {
+                                    viewModel.takeAction(SettingsAction.SetHapticsEnabled(it))
                                 },
                             ),
                             onClick = null,
@@ -197,4 +237,69 @@ private fun soundModeSubtitle(mode: SoundMode): String = when (mode) {
     SoundMode.Off -> "No sound during workout."
     SoundMode.Beeps -> "Short tones on transitions and countdown."
     SoundMode.Voice -> "Spoken block names and countdown."
+}
+
+private fun soundPackSubtitle(pack: SoundPack): String = when (pack) {
+    SoundPack.Classic -> "Clean sine-wave beeps."
+    SoundPack.Chime -> "Soft, resonant chimes."
+    SoundPack.Bell -> "Struck bell, metallic and punchy."
+}
+
+@Composable
+private fun VolumeRow(
+    volume: Float,
+    onVolumeChange: (Float) -> Unit,
+) {
+    Surface(
+        color = AppTheme.colors.surfacePrimary,
+        contentColor = AppTheme.colors.onSurfacePrimary,
+        radius = Radii.Card,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            horizontal = Dimension.D600,
+            vertical = Dimension.D500,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SettingsIcon(Icons.VolumeUp("Cue volume"))
+                Spacer(modifier = Modifier.size(Dimension.D500))
+                Text(
+                    text = "Cue volume",
+                    typography = AppTheme.typography.Body.B700.SemiBold,
+                    modifier = Modifier.fillMaxWidth().padding(end = Dimension.D400),
+                )
+            }
+            Spacer(modifier = Modifier.height(Dimension.D300))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Slider(
+                    value = volume,
+                    onValueChange = onVolumeChange,
+                    modifier = Modifier.fillMaxWidth().padding(end = Dimension.D400),
+                    colors = SliderDefaults.colors(
+                        thumbColor = AppTheme.colors.accentPrimary.color,
+                        activeTrackColor = AppTheme.colors.accentPrimary.color,
+                        inactiveTrackColor = AppTheme.colors.surfaceDisabled.color,
+                    ),
+                )
+                Text(
+                    text = "${(volume * 100).roundToInt()}%",
+                    typography = AppTheme.typography.Label.L400,
+                    color = AppTheme.colors.textSecondary,
+                )
+            }
+            Spacer(modifier = Modifier.height(Dimension.D100))
+            Text(
+                text = "Independent from your phone volume. Music stays loud; cues stay whatever you pick.",
+                typography = AppTheme.typography.Body.B400,
+                color = AppTheme.colors.textSecondary,
+            )
+        }
+    }
 }

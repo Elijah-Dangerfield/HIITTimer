@@ -4,9 +4,31 @@ import com.dangerfield.hiittimer.libraries.preferences.Preference
 
 enum class SoundMode { Off, Beeps, Voice }
 
+enum class SoundPack(val displayName: String) {
+    Classic("Classic"),
+    Chime("Chime"),
+    Bell("Bell"),
+}
+
 object SoundModePref : Preference<String>() {
     override val key: String = "timer.sound.mode"
     override val default: String = SoundMode.Beeps.name
+}
+
+object SoundPackPref : Preference<String>() {
+    override val key: String = "timer.sound.pack"
+    override val default: String = SoundPack.Classic.name
+}
+
+/** Volume for timer cues, 0.0..1.0. Layered on top of system volume. */
+object CueVolumePref : Preference<Float>() {
+    override val key: String = "timer.sound.volume"
+    override val default: Float = 0.8f
+}
+
+object HapticsEnabledPref : Preference<Boolean>() {
+    override val key: String = "timer.haptics.enabled"
+    override val default: Boolean = true
 }
 
 object HalfwayCalloutsPref : Preference<Boolean>() {
