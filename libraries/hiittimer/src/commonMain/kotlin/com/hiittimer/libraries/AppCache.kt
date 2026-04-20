@@ -16,10 +16,13 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 data class AppData(
     // Onboarding
     val hasUserOnboarded: Boolean = false,
-    
+
+    // Whether we've checked whether to seed starter timers on first launch.
+    val hasCheckedStarterTimers: Boolean = false,
+
     // Screen visits - automatically tracked for any TrackableRoute
     val screenVisits: Map<String, Int> = emptyMap(),
-    
+
     // User actions
     val feedbacksGiven: Int = 0,
     val bugsReported: Int = 0,

@@ -16,6 +16,7 @@ kotlin {
 
             implementation(projects.libraries.core)
             implementation(projects.libraries.flowroutines)
+            implementation(projects.libraries.hiittimer)
             implementation(projects.libraries.ui)
             implementation(projects.libraries.preferences)
             implementation(projects.libraries.inappmessages)
