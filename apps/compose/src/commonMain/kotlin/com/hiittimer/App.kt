@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import com.dangerfield.hiittimer.libraries.ui.PreviewAppState
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
 import com.dangerfield.hiittimer.libraries.ui.components.SnackbarDuration
+import com.dangerfield.hiittimer.libraries.inappmessages.impl.InAppMessageOverlay
 import com.dangerfield.hiittimer.libraries.ui.components.dialog.DialogHost
 import com.dangerfield.hiittimer.libraries.ui.components.dialog.LocalDialogHostState
 import com.dangerfield.hiittimer.libraries.ui.components.dialog.rememberDialogHostState
@@ -113,6 +114,8 @@ fun App(appComponent: AppComponent) {
                     modifier = Modifier.matchParentSize(),
                     hostState = dialogHostState
                 )
+
+                InAppMessageOverlay(appComponent.inAppMessageDialogHost)
             }
         }
     }

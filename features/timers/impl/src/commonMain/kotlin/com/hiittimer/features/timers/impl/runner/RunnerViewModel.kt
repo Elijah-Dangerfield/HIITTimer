@@ -3,7 +3,6 @@ package com.dangerfield.hiittimer.features.timers.impl.runner
 import androidx.lifecycle.viewModelScope
 import com.dangerfield.hiittimer.features.timers.CompletedWorkoutsPref
 import com.dangerfield.hiittimer.features.timers.HalfwayCalloutsPref
-import com.dangerfield.hiittimer.features.timers.ReviewPromptShownPref
 import com.dangerfield.hiittimer.features.timers.ShowProgressBarPref
 import com.dangerfield.hiittimer.features.timers.SoundMode
 import com.dangerfield.hiittimer.features.timers.SoundModePref
@@ -12,21 +11,20 @@ import com.dangerfield.hiittimer.features.timers.impl.TimerRepository
 import com.dangerfield.hiittimer.features.timers.impl.audio.AudioCuePlayer
 import com.dangerfield.hiittimer.features.timers.impl.audio.AudioCuePlayerFactory
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
+import com.dangerfield.hiittimer.libraries.inappmessages.InAppMessageCoordinator
+import com.dangerfield.hiittimer.libraries.inappmessages.InAppMessageTrigger
 import com.dangerfield.hiittimer.libraries.preferences.Preferences
-import com.dangerfield.hiittimer.libraries.review.RequestReviewIfPossible
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
-
-private const val REVIEW_PROMPT_COMPLETION_THRESHOLD = 3
 
 @Inject
 class RunnerViewModel(
     private val repository: TimerRepository,
     private val preferences: Preferences,
     private val audioFactory: AudioCuePlayerFactory,
-    private val requestReviewIfPossible: RequestReviewIfPossible,
+    private val inAppMessageCoordinator: InAppMessageCoordinator,
     private val foregroundController: RunnerForegroundController,
     @Assisted private val timerId: String,
 ) : SEAViewModel<RunnerUiState, RunnerEvent, RunnerAction>(initialStateArg = RunnerUiState()) {
@@ -104,12 +102,7 @@ class RunnerViewModel(
                     stopForegroundIfNeeded()
                     val completed = preferences.get(CompletedWorkoutsPref) + 1
                     preferences.set(CompletedWorkoutsPref, completed)
-                    if (completed >= REVIEW_PROMPT_COMPLETION_THRESHOLD &&
-                        !preferences.get(ReviewPromptShownPref)
-                    ) {
-                        preferences.set(ReviewPromptShownPref, true)
-                        requestReviewIfPossible.invoke()
-                    }
+                    inAppMessageCoordinator.tryShow(InAppMessageTrigger.WorkoutCompleted)
                 }
             }
         }

@@ -48,6 +48,8 @@ kotlin {
             implementation(projects.libraries.preferences.impl)
             implementation(projects.libraries.review)
             implementation(projects.libraries.review.impl)
+            implementation(projects.libraries.inappmessages)
+            implementation(projects.libraries.inappmessages.impl)
 
             implementation(libs.atomicfu)
             
