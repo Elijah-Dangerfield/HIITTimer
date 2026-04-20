@@ -11,12 +11,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dangerfield.hiittimer.features.timers.SoundMode
+import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
 import com.dangerfield.hiittimer.libraries.ui.components.HorizontalDivider
 import com.dangerfield.hiittimer.libraries.ui.components.ListItemAccessory
 import com.dangerfield.hiittimer.libraries.ui.components.ListSection
@@ -41,13 +41,11 @@ fun SettingsScreen(
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        viewModel.eventFlow.collect { event ->
-            when (event) {
-                is SettingsEvent.OpenUrl -> onOpenUrl(event.url)
-                SettingsEvent.NavigateToFeedback -> onNavigateToFeedback()
-                SettingsEvent.NavigateToBugReport -> onNavigateToBugReport()
-            }
+    viewModel.ObserveEvents { event ->
+        when (event) {
+            is SettingsEvent.OpenUrl -> onOpenUrl(event.url)
+            SettingsEvent.NavigateToFeedback -> onNavigateToFeedback()
+            SettingsEvent.NavigateToBugReport -> onNavigateToBugReport()
         }
     }
 

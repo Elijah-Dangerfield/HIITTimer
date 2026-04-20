@@ -22,7 +22,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +36,7 @@ import com.dangerfield.hiittimer.features.timers.Timer
 import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import androidx.compose.ui.tooling.preview.Preview
+import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
 import kotlin.time.Duration.Companion.seconds
 import com.dangerfield.hiittimer.libraries.ui.components.HorizontalDivider
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
@@ -58,19 +58,18 @@ import com.dangerfield.hiittimer.system.Radii
 @Composable
 fun TimerListScreen(
     viewModel: TimerListViewModel,
+
     onOpenDetail: (timerId: String, isNew: Boolean) -> Unit,
     onStart: (String) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        viewModel.eventFlow.collect { event ->
-            when (event) {
-                is TimerListEvent.OpenDetail -> onOpenDetail(event.timerId, event.isNew)
-                is TimerListEvent.StartRunner -> onStart(event.timerId)
-                TimerListEvent.OpenSettings -> onOpenSettings()
-            }
+    viewModel.ObserveEvents { event ->
+        when (event) {
+            is TimerListEvent.OpenDetail -> onOpenDetail(event.timerId, event.isNew)
+            is TimerListEvent.StartRunner -> onStart(event.timerId)
+            TimerListEvent.OpenSettings -> onOpenSettings()
         }
     }
 

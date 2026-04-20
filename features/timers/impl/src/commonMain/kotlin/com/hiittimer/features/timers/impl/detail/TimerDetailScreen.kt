@@ -43,6 +43,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,7 @@ import com.dangerfield.hiittimer.features.timers.Block
 import com.dangerfield.hiittimer.features.timers.BlockRole
 import com.dangerfield.hiittimer.features.timers.Timer
 import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
+import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import androidx.compose.ui.tooling.preview.Preview
 import kotlin.time.Duration.Companion.seconds
@@ -96,14 +99,12 @@ fun TimerDetailScreen(
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        viewModel.eventFlow.collect { event ->
-            when (event) {
-                is TimerDetailEvent.Start -> onStart(event.timerId)
-                is TimerDetailEvent.OpenBlock -> onOpenBlock(event.timerId, event.blockId)
-                is TimerDetailEvent.OpenDuplicate -> onOpenDuplicate(event.newTimerId)
-                TimerDetailEvent.Close -> onBack()
-            }
+    viewModel.ObserveEvents { event ->
+        when (event) {
+            is TimerDetailEvent.Start -> onStart(event.timerId)
+            is TimerDetailEvent.OpenBlock -> onOpenBlock(event.timerId, event.blockId)
+            is TimerDetailEvent.OpenDuplicate -> onOpenDuplicate(event.newTimerId)
+            TimerDetailEvent.Close -> onBack()
         }
     }
 
@@ -148,8 +149,17 @@ private fun TimerDetailContent(
 ) {
     val timer = state.timer
     val lazyListState = rememberLazyListState()
+
+    // Track the name text's bottom edge vs the list's top edge in window coords.
+    // Show the header title once the name has scrolled above the list viewport,
+    // so it flips when the name itself is gone — not when the whole hero card is.
+    var nameBottomInWindow by remember { mutableStateOf(Float.POSITIVE_INFINITY) }
+    var listTopInWindow by remember { mutableStateOf(0f) }
     val titleInHeader by remember {
-        derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
+        derivedStateOf {
+            val heroOnScreen = lazyListState.layoutInfo.visibleItemsInfo.any { it.index == 0 }
+            !heroOnScreen || nameBottomInWindow <= listTopInWindow
+        }
     }
     Screen(modifier = Modifier.fillMaxSize()) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -177,7 +187,10 @@ private fun TimerDetailContent(
                 onRequestDeleteBlock = onRequestDeleteBlock,
                 onReorder = onReorder,
                 onAddBlock = onAddBlock,
-                modifier = Modifier.weight(1f),
+                onNameBottomChanged = { nameBottomInWindow = it },
+                modifier = Modifier
+                    .weight(1f)
+                    .onGloballyPositioned { listTopInWindow = it.boundsInWindow().top },
             )
         }
     }
@@ -292,6 +305,7 @@ private fun DetailList(
     onRequestDeleteBlock: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
     onAddBlock: (BlockRole) -> Unit,
+    onNameBottomChanged: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val items: List<DetailItem> = remember(timer) { buildDetailItems(timer) }
@@ -332,6 +346,7 @@ private fun DetailList(
                         isNew = isNew,
                         onRename = onRename,
                         onStart = onStart,
+                        onNameBottomChanged = onNameBottomChanged,
                     )
                 }
                 DetailItem.Rounds -> item(key = "rounds") {
@@ -408,6 +423,7 @@ private fun Hero(
     isNew: Boolean,
     onRename: (String) -> Unit,
     onStart: () -> Unit,
+    onNameBottomChanged: (Float) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -417,12 +433,18 @@ private fun Hero(
             .padding(horizontal = Dimension.D900, vertical = Dimension.D1000),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        InlineTitleField(
-            value = nameField,
-            onValueChange = onRename,
-            placeholder = "Untitled",
-            requestFocus = isNew,
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { onNameBottomChanged(it.boundsInWindow().bottom) },
+        ) {
+            InlineTitleField(
+                value = nameField,
+                onValueChange = onRename,
+                placeholder = "Untitled",
+                requestFocus = isNew,
+            )
+        }
 
         Spacer(modifier = Modifier.height(Dimension.D700))
 

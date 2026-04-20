@@ -22,7 +22,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @Inject
 class AppViewModel(
     private val appCache: AppCache,
-) : SEAViewModel<AppState, AppEvent, AppAction>(AppState()) {
+) : SEAViewModel<AppState, AppEvent, AppAction>(AppState(startDestination = TimerListRoute())) {
 
     private val _isReady = MutableStateFlow(false)
 
@@ -52,7 +52,7 @@ class AppViewModel(
 }
 
 data class AppState(
-    val startDestination: Route? = null,
+    val startDestination: Route,
     val hasShownSplash: Boolean = false,
 )
 

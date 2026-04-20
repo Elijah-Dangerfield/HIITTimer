@@ -94,15 +94,13 @@ fun App(appComponent: AppComponent) {
     ) {
         AppThemeProvider {
             Box(modifier = Modifier.fillMaxSize()) {
-                state.startDestination?.let { startDestination ->
-                    AppNavigation(
-                        navController = navController,
-                        floatingWindowNavigator = floatingWindowNavigator,
-                        featureEntryPoints = appComponent.featureEntryPoints,
-                        startDestination = startDestination,
-                        router = router,
-                    )
-                }
+                AppNavigation(
+                    navController = navController,
+                    floatingWindowNavigator = floatingWindowNavigator,
+                    featureEntryPoints = appComponent.featureEntryPoints,
+                    startDestination = state.startDestination,
+                    router = router,
+                )
 
                 if (!state.hasShownSplash) {
                     SplashOverlay(

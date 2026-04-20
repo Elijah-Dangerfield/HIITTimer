@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
 import com.dangerfield.hiittimer.features.timers.Block
 import com.dangerfield.hiittimer.features.timers.BlockRole
 import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
@@ -73,10 +75,8 @@ fun BlockEditScreen(
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        viewModel.eventFlow.collect { event ->
-            if (event is BlockEditEvent.Close) onBack()
-        }
+    viewModel.ObserveEvents { event ->
+        if (event is BlockEditEvent.Close) onBack()
     }
 
     BlockEditContent(
@@ -113,9 +113,10 @@ private fun BlockEditContent(
     onDurationChange: (Int) -> Unit,
 ) {
     val block = state.block ?: return
-    val blockColor = Color(block.colorArgb)
-    val onBlock = ColorPalette.onColorFor(block.colorArgb)
-    val onBlockResource = ColorResource.FromColor(onBlock, "on-block")
+    val blockColor = remember(block.colorArgb) { Color(block.colorArgb) }
+    val onBlockResource = remember(block.colorArgb) {
+        ColorResource.FromColor(ColorPalette.onColorFor(block.colorArgb), "on-block")
+    }
 
     Screen(
         modifier = Modifier.fillMaxSize(),
@@ -331,26 +332,37 @@ private fun WheelColumn(
 ) {
     val itemHeight = 56.dp
     val values = remember(range) { range.toList() }
-    val initialIndex = (value - range.first).coerceIn(0, values.lastIndex)
+    val initialIndex = remember(range) { (value - range.first).coerceIn(0, values.lastIndex) }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = state)
 
-    LaunchedEffect(state) {
-        snapshotFlow { state.isScrollInProgress }
-            .collect { scrolling ->
-                if (!scrolling) {
-                    val layoutInfo = state.layoutInfo
-                    val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
-                    val centerItem = layoutInfo.visibleItemsInfo.minByOrNull { item ->
-                        val itemCenter = item.offset + item.size / 2
-                        kotlin.math.abs(itemCenter - viewportCenter)
-                    }
-                    if (centerItem != null) {
-                        val newValue = values.getOrNull(centerItem.index) ?: return@collect
-                        if (newValue != value) onValueChange(newValue)
+    // Keep the effect's closure in sync with the latest composition. Without this
+    // the LaunchedEffect below captures the first-composition `value`/`onValueChange`
+    // forever (its key never changes), so scrolling one wheel would compute the
+    // other axis from stale initial state and reset it.
+    val currentValue by rememberUpdatedState(value)
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+
+    LaunchedEffect(state, values) {
+        var wasScrolling = false
+        snapshotFlow { state.isScrollInProgress }.collect { scrolling ->
+            if (wasScrolling && !scrolling) {
+                val layoutInfo = state.layoutInfo
+                val viewportCenter =
+                    (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+                val centerItem = layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                    val itemCenter = item.offset + item.size / 2
+                    kotlin.math.abs(itemCenter - viewportCenter)
+                }
+                if (centerItem != null) {
+                    val newValue = values.getOrNull(centerItem.index)
+                    if (newValue != null && newValue != currentValue) {
+                        currentOnValueChange(newValue)
                     }
                 }
             }
+            wasScrolling = scrolling
+        }
     }
 
     LaunchedEffect(value) {
