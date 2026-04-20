@@ -1,6 +1,7 @@
 package com.dangerfield.hiittimer
 
 import com.dangerfield.hiittimer.libraries.hiittimer.impl.AppEventDispatcher
+import com.dangerfield.hiittimer.libraries.inappmessages.InAppMessageDialogHost
 import com.dangerfield.hiittimer.libraries.navigation.impl.DelegatingRouter
 import com.dangerfield.hiittimer.libraries.hiittimer.Telemetry
 import com.dangerfield.hiittimer.libraries.navigation.FeatureEntryPoint
@@ -18,6 +19,7 @@ interface AppComponent {
     val delegatingRouter: DelegatingRouter
     val telemetry: Telemetry
     val shakeHandler: ShakeHandler
+    val inAppMessageDialogHost: InAppMessageDialogHost
     
     /**
      * Eagerly initialized to start observing app lifecycle events.

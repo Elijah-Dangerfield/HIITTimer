@@ -18,7 +18,7 @@ kotlin {
             implementation(projects.libraries.flowroutines)
             implementation(projects.libraries.ui)
             implementation(projects.libraries.preferences)
-            implementation(projects.libraries.review)
+            implementation(projects.libraries.inappmessages)
             implementation(libs.reorderable)
 
             implementation(compose.runtime)
