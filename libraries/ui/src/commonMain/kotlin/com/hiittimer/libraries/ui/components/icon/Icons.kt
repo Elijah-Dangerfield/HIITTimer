@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Window
 import androidx.compose.material.icons.outlined.AccessTime
@@ -277,6 +278,10 @@ enum class Icons(
 
     SkipNext(
         default = androidx.compose.material.icons.Icons.Filled.SkipNext,
+    ),
+
+    Replay(
+        default = androidx.compose.material.icons.Icons.Filled.Replay,
     ),
 
     VolumeUp(

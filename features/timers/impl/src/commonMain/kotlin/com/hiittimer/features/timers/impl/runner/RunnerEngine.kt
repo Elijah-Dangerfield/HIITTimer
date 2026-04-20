@@ -14,9 +14,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 sealed interface RunnerState {
     data object Idle : RunnerState
+
+    /**
+     * 3-2-1 "Get Ready / Get Set / Go!" countdown before the first block.
+     * Not counted in the workout's elapsed time and not tied to a [Block].
+     */
+    data class PreRoll(
+        val timer: Timer,
+        val firstBlock: Block,
+        val remaining: Duration,
+        val phase: Int,
+    ) : RunnerState
 
     data class Running(
         val timer: Timer,
@@ -44,6 +56,7 @@ sealed interface RunnerState {
 sealed interface RunnerCue {
     data class BlockStart(val block: Block) : RunnerCue
     data class Countdown(val remainingSeconds: Int) : RunnerCue
+    data class Prepare(val phase: Int) : RunnerCue
     data class Halfway(val block: Block) : RunnerCue
     data object Finish : RunnerCue
 }
@@ -62,7 +75,9 @@ class RunnerEngine(private val timer: Timer) {
     val cues: Flow<RunnerCue> = _cues.asSharedFlow()
 
     private val tickIntervalMs = 50L
+    private val preRollDuration = 3.seconds
     private var lastSecondEmitted = -1
+    private var lastPreRollPhaseEmitted = -1
     private var halfwayEmitted = false
     private var running = false
 
@@ -76,8 +91,14 @@ class RunnerEngine(private val timer: Timer) {
             )
             return
         }
-        _state.value = runningFor(index = 0, elapsed = Duration.ZERO, remaining = sequence.first().block.duration)
-        emitCue(RunnerCue.BlockStart(sequence.first().block))
+        _state.value = RunnerState.PreRoll(
+            timer = timer,
+            firstBlock = sequence.first().block,
+            remaining = preRollDuration,
+            phase = preRollDuration.inWholeSeconds.toInt(),
+        )
+        lastPreRollPhaseEmitted = preRollDuration.inWholeSeconds.toInt()
+        emitCue(RunnerCue.Prepare(lastPreRollPhaseEmitted))
         loop()
     }
 
@@ -102,6 +123,18 @@ class RunnerEngine(private val timer: Timer) {
         advanceBlock(running, forcedAdvance = true)
     }
 
+    fun resetCurrentBlock() {
+        val current = _state.value as? RunnerState.Running ?: return
+        lastSecondEmitted = -1
+        halfwayEmitted = false
+        val elapsedDelta = current.currentBlock.duration - current.remaining
+        _state.value = current.copy(
+            remaining = current.currentBlock.duration,
+            elapsedTotal = (current.elapsedTotal - elapsedDelta).coerceAtLeast(Duration.ZERO),
+        )
+        emitCue(RunnerCue.BlockStart(current.currentBlock))
+    }
+
     fun stop() {
         running = false
         _state.value = RunnerState.Idle
@@ -117,12 +150,37 @@ class RunnerEngine(private val timer: Timer) {
             val now = Clock.System.now()
             val delta = (now - last)
             last = now
-            tick(delta)
+            when (val current = _state.value) {
+                is RunnerState.PreRoll -> tickPreRoll(current, delta)
+                is RunnerState.Running -> tick(delta)
+                else -> Unit
+            }
             val current = _state.value
             if (current is RunnerState.Finished || current is RunnerState.Paused || current is RunnerState.Idle) {
                 running = false
             }
         }
+    }
+
+    private fun tickPreRoll(current: RunnerState.PreRoll, delta: Duration) {
+        val newRemaining = current.remaining - delta
+        if (newRemaining <= Duration.ZERO) {
+            lastSecondEmitted = -1
+            halfwayEmitted = false
+            _state.value = runningFor(
+                index = 0,
+                elapsed = Duration.ZERO,
+                remaining = sequence.first().block.duration,
+            )
+            emitCue(RunnerCue.BlockStart(sequence.first().block))
+            return
+        }
+        val phase = ((newRemaining.inWholeMilliseconds + 999L) / 1000L).toInt()
+        if (phase != lastPreRollPhaseEmitted) {
+            lastPreRollPhaseEmitted = phase
+            if (phase in 1..3) emitCue(RunnerCue.Prepare(phase))
+        }
+        _state.value = current.copy(remaining = newRemaining, phase = phase)
     }
 
     private fun tick(delta: Duration) {

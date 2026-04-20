@@ -1,9 +1,12 @@
 @file:Suppress("DEPRECATION")
-@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+@file:OptIn(ExperimentalComposeUiApi::class)
 
 package com.dangerfield.hiittimer.features.timers.impl.runner
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,13 +30,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,6 +48,7 @@ import com.dangerfield.hiittimer.features.timers.BlockRole
 import com.dangerfield.hiittimer.features.timers.SoundMode
 import com.dangerfield.hiittimer.features.timers.Timer
 import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
+import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import androidx.compose.ui.tooling.preview.Preview
 import kotlin.time.Duration.Companion.seconds
@@ -61,6 +69,7 @@ import com.dangerfield.hiittimer.system.Dimension
 import com.dangerfield.hiittimer.system.Radii
 import kotlin.time.Duration
 import androidx.compose.ui.backhandler.BackHandler
+import kotlinx.coroutines.delay
 
 @Composable
 fun RunnerScreen(
@@ -70,10 +79,8 @@ fun RunnerScreen(
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        viewModel.eventFlow.collect { event ->
-            if (event is RunnerEvent.Exit) onExit()
-        }
+    viewModel.ObserveEvents { event ->
+        if (event is RunnerEvent.Exit) onExit()
     }
 
     RunnerContent(
@@ -83,6 +90,7 @@ fun RunnerScreen(
         onPause = { viewModel.takeAction(RunnerAction.Pause) },
         onResume = { viewModel.takeAction(RunnerAction.Resume) },
         onSkip = { viewModel.takeAction(RunnerAction.Skip) },
+        onResetBlock = { viewModel.takeAction(RunnerAction.ResetBlock) },
         onStop = { viewModel.takeAction(RunnerAction.Stop) },
         onSupportClick = onSupportClick,
     )
@@ -96,11 +104,13 @@ private fun RunnerContent(
     onPause: () -> Unit,
     onResume: () -> Unit,
     onSkip: () -> Unit,
+    onResetBlock: () -> Unit,
     onStop: () -> Unit,
     onSupportClick: () -> Unit,
 ) {
     val engine = state.engineState
     val backgroundArgb = when (engine) {
+        is RunnerState.PreRoll -> engine.firstBlock.colorArgb
         is RunnerState.Running -> engine.currentBlock.colorArgb
         is RunnerState.Paused -> engine.snapshot.currentBlock.colorArgb
         is RunnerState.Finished -> 0xFF1B1B1F.toInt()
@@ -111,68 +121,64 @@ private fun RunnerContent(
     val onBg: ColorResource = ColorResource.FromColor(onBgColor, "on-block")
 
     var showExitConfirm by remember { mutableStateOf(false) }
-    val running = engine is RunnerState.Running
-    BackHandler(enabled = running) {
+    val active = engine is RunnerState.Running || engine is RunnerState.PreRoll
+    BackHandler(enabled = active) {
         showExitConfirm = true
     }
 
     val requestExit: () -> Unit = {
-        if (running) showExitConfirm = true else onStop()
+        if (active) showExitConfirm = true else onStop()
+    }
+
+    val backgroundGradient = remember(bg) {
+        Brush.verticalGradient(
+            colors = listOf(
+                lerp(bg, Color.White, 0.08f),
+                bg,
+                lerp(bg, Color.Black, 0.14f),
+            ),
+        )
     }
 
     Screen(
         modifier = Modifier.fillMaxSize(),
         containerColor = bg,
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = Dimension.D700, vertical = Dimension.D500),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .background(backgroundGradient)
+                .padding(padding),
         ) {
-            TopBar(
-                title = state.timer?.name.orEmpty(),
-                onExit = requestExit,
-                onBg = onBg,
-            )
-
-            Spacer(modifier = Modifier.height(Dimension.D500))
-
-            when (engine) {
-                is RunnerState.Running -> RunningBody(engine, onBg = onBg, paused = false)
-                is RunnerState.Paused -> RunningBody(engine.snapshot, onBg = onBg, paused = true)
-                is RunnerState.Finished -> FinishedBody(
-                    engine = engine,
+            val isLandscape = maxWidth > maxHeight
+            if (isLandscape) {
+                RunnerLandscapeLayout(
+                    state = state,
                     onBg = onBg,
-                    onExit = onExit,
+                    bg = bg,
+                    onExit = requestExit,
+                    onToggleSound = onToggleSound,
+                    onPause = onPause,
+                    onResume = onResume,
+                    onSkip = onSkip,
+                    onResetBlock = onResetBlock,
+                    onFinalExit = onExit,
                     onSupportClick = onSupportClick,
                 )
-                RunnerState.Idle -> Spacer(modifier = Modifier.fillMaxWidth())
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            BottomControls(
-                paused = engine is RunnerState.Paused,
-                finished = engine is RunnerState.Finished,
-                soundMode = state.soundMode,
-                onToggleSound = onToggleSound,
-                onPauseResume = { if (engine is RunnerState.Paused) onResume() else onPause() },
-                onSkip = onSkip,
-                onBg = onBg,
-                blockColor = bg,
-            )
-
-            if (state.showProgressBar && engine is RunnerState.Running) {
-                Spacer(modifier = Modifier.height(Dimension.D700))
-                TotalProgress(
-                    elapsed = engine.elapsedTotal,
-                    total = engine.totalDuration,
-                    onBg = onBg,
-                )
             } else {
-                Spacer(modifier = Modifier.height(Dimension.D700))
+                RunnerPortraitLayout(
+                    state = state,
+                    onBg = onBg,
+                    bg = bg,
+                    onExit = requestExit,
+                    onToggleSound = onToggleSound,
+                    onPause = onPause,
+                    onResume = onResume,
+                    onSkip = onSkip,
+                    onResetBlock = onResetBlock,
+                    onFinalExit = onExit,
+                    onSupportClick = onSupportClick,
+                )
             }
         }
     }
@@ -186,6 +192,298 @@ private fun RunnerContent(
             },
         )
     }
+}
+
+@Composable
+private fun RunnerPortraitLayout(
+    state: RunnerUiState,
+    onBg: ColorResource,
+    bg: Color,
+    onExit: () -> Unit,
+    onToggleSound: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onSkip: () -> Unit,
+    onResetBlock: () -> Unit,
+    onFinalExit: () -> Unit,
+    onSupportClick: () -> Unit,
+) {
+    val engine = state.engineState
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Dimension.D700, vertical = Dimension.D500),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        TopBar(
+            title = state.timer?.name.orEmpty(),
+            onExit = onExit,
+            onBg = onBg,
+            onResetBlock = onResetBlock,
+            resetEnabled = engine is RunnerState.Running,
+        )
+
+        Spacer(modifier = Modifier.height(Dimension.D500))
+
+        when (engine) {
+            is RunnerState.PreRoll -> PreRollBody(engine, onBg = onBg)
+            is RunnerState.Running -> RunningBody(engine, onBg = onBg, paused = false)
+            is RunnerState.Paused -> RunningBody(engine.snapshot, onBg = onBg, paused = true)
+            is RunnerState.Finished -> FinishedBody(
+                engine = engine,
+                onBg = onBg,
+                onExit = onFinalExit,
+                onSupportClick = onSupportClick,
+            )
+            RunnerState.Idle -> Spacer(modifier = Modifier.fillMaxWidth())
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        BottomControls(
+            paused = engine is RunnerState.Paused,
+            finished = engine is RunnerState.Finished,
+            disabled = engine is RunnerState.PreRoll,
+            soundMode = state.soundMode,
+            onToggleSound = onToggleSound,
+            onPauseResume = { if (engine is RunnerState.Paused) onResume() else onPause() },
+            onSkip = onSkip,
+            onBg = onBg,
+            blockColor = bg,
+        )
+
+        if (state.showProgressBar && engine is RunnerState.Running) {
+            Spacer(modifier = Modifier.height(Dimension.D700))
+            TotalProgress(
+                elapsed = engine.elapsedTotal,
+                total = engine.totalDuration,
+                onBg = onBg,
+            )
+        } else {
+            Spacer(modifier = Modifier.height(Dimension.D700))
+        }
+    }
+}
+
+@Composable
+private fun RunnerLandscapeLayout(
+    state: RunnerUiState,
+    onBg: ColorResource,
+    bg: Color,
+    onExit: () -> Unit,
+    onToggleSound: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onSkip: () -> Unit,
+    onResetBlock: () -> Unit,
+    onFinalExit: () -> Unit,
+    onSupportClick: () -> Unit,
+) {
+    val engine = state.engineState
+
+    if (engine is RunnerState.Finished) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = Dimension.D700, vertical = Dimension.D500),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            TopBar(title = state.timer?.name.orEmpty(), onExit = onExit, onBg = onBg)
+            Spacer(modifier = Modifier.height(Dimension.D500))
+            FinishedBody(
+                engine = engine,
+                onBg = onBg,
+                onExit = onFinalExit,
+                onSupportClick = onSupportClick,
+            )
+        }
+        return
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Dimension.D700, vertical = Dimension.D400),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center,
+        ) {
+            when (engine) {
+                is RunnerState.PreRoll -> PreRollRing(engine, onBg = onBg)
+                is RunnerState.Running -> ProgressRing(
+                    remaining = engine.remaining,
+                    blockDuration = engine.currentBlock.duration,
+                    onBg = onBg,
+                )
+                is RunnerState.Paused -> ProgressRing(
+                    remaining = engine.snapshot.remaining,
+                    blockDuration = engine.snapshot.currentBlock.duration,
+                    onBg = onBg,
+                )
+                else -> Unit
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxSize()
+                .padding(vertical = Dimension.D400),
+        ) {
+            TopBar(
+                title = state.timer?.name.orEmpty(),
+                onExit = onExit,
+                onBg = onBg,
+                onResetBlock = onResetBlock,
+                resetEnabled = engine is RunnerState.Running,
+            )
+
+            Spacer(modifier = Modifier.height(Dimension.D500))
+
+            when (engine) {
+                is RunnerState.PreRoll -> {
+                    Text(
+                        text = preRollPhrase(engine.phase),
+                        typography = AppTheme.typography.Display.D1500,
+                        color = onBg,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(modifier = Modifier.height(Dimension.D300))
+                    Text(
+                        text = "Up first: ${engine.firstBlock.name}",
+                        typography = AppTheme.typography.Label.L400,
+                        color = onBg.withAlpha(0.7f),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                is RunnerState.Running -> {
+                    SummaryCards(engine = engine, onBg = onBg)
+                    Spacer(modifier = Modifier.height(Dimension.D500))
+                    Text(
+                        text = engine.currentBlock.name,
+                        typography = AppTheme.typography.Display.D1500,
+                        color = onBg,
+                    )
+                    engine.nextBlock?.let { next ->
+                        Spacer(modifier = Modifier.height(Dimension.D200))
+                        Text(
+                            text = "Up next: ${next.name}",
+                            typography = AppTheme.typography.Label.L400,
+                            color = onBg.withAlpha(0.7f),
+                        )
+                    }
+                }
+                is RunnerState.Paused -> {
+                    SummaryCards(engine = engine.snapshot, onBg = onBg)
+                    Spacer(modifier = Modifier.height(Dimension.D500))
+                    Text(
+                        text = "Paused",
+                        typography = AppTheme.typography.Display.D1500,
+                        color = onBg,
+                    )
+                }
+                else -> Unit
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            BottomControls(
+                paused = engine is RunnerState.Paused,
+                finished = false,
+                disabled = engine is RunnerState.PreRoll,
+                soundMode = state.soundMode,
+                onToggleSound = onToggleSound,
+                onPauseResume = { if (engine is RunnerState.Paused) onResume() else onPause() },
+                onSkip = onSkip,
+                onBg = onBg,
+                blockColor = bg,
+            )
+
+            if (state.showProgressBar && engine is RunnerState.Running) {
+                Spacer(modifier = Modifier.height(Dimension.D400))
+                TotalProgress(
+                    elapsed = engine.elapsedTotal,
+                    total = engine.totalDuration,
+                    onBg = onBg,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreRollBody(engine: RunnerState.PreRoll, onBg: ColorResource) {
+    Spacer(modifier = Modifier.height(Dimension.D900))
+    PreRollRing(engine, onBg = onBg)
+    Spacer(modifier = Modifier.height(Dimension.D900))
+    Text(
+        text = preRollPhrase(engine.phase),
+        typography = AppTheme.typography.Display.D1500,
+        color = onBg,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(modifier = Modifier.height(Dimension.D300))
+    Text(
+        text = "Up first: ${engine.firstBlock.name}",
+        typography = AppTheme.typography.Label.L400,
+        color = onBg.withAlpha(0.7f),
+    )
+}
+
+@Composable
+private fun PreRollRing(engine: RunnerState.PreRoll, onBg: ColorResource) {
+    val totalMs = 3000L
+    val remainingMs = engine.remaining.inWholeMilliseconds.coerceAtLeast(0L)
+    val fraction = (remainingMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
+    val animated by animateFloatAsState(targetValue = fraction, label = "preroll-ring")
+    val trackColor = onBg.color.copy(alpha = 0.18f)
+    val progressColor = onBg.color
+
+    BoxWithConstraints(
+        modifier = Modifier.size(280.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = 18.dp.toPx()
+            val inset = strokeWidth / 2f
+            val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
+            val topLeft = Offset(inset, inset)
+            drawArc(
+                color = trackColor,
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+            drawArc(
+                color = progressColor,
+                startAngle = -90f,
+                sweepAngle = 360f * animated,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+        }
+        Text(
+            text = engine.phase.coerceAtLeast(1).toString(),
+            typography = AppTheme.typography.Display.D1500,
+            color = onBg,
+        )
+    }
+}
+
+private fun preRollPhrase(phase: Int): String = when (phase) {
+    3 -> "Get ready"
+    2 -> "Get set"
+    1 -> "Go!"
+    else -> ""
 }
 
 @Composable
@@ -227,7 +525,13 @@ private fun ExitConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 }
 
 @Composable
-private fun TopBar(title: String, onExit: () -> Unit, onBg: ColorResource) {
+private fun TopBar(
+    title: String,
+    onExit: () -> Unit,
+    onBg: ColorResource,
+    onResetBlock: (() -> Unit)? = null,
+    resetEnabled: Boolean = false,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -243,11 +547,22 @@ private fun TopBar(title: String, onExit: () -> Unit, onBg: ColorResource) {
         )
         Text(
             text = title,
-            typography = AppTheme.typography.Label.L600,
+            typography = AppTheme.typography.Display.D800,
             color = onBg,
             maxLines = 1,
         )
-        Spacer(modifier = Modifier.size(Dimension.D1200))
+        if (onResetBlock != null) {
+            CircleIcon(
+                icon = Icons.Replay("Reset this block"),
+                iconSize = IconSize.Medium,
+                padding = Dimension.D300,
+                backgroundColor = onBg.withAlpha(if (resetEnabled) 0.12f else 0.04f),
+                contentColor = if (resetEnabled) onBg else onBg.withAlpha(0.4f),
+                onClick = if (resetEnabled) onResetBlock else ({}),
+            )
+        } else {
+            Spacer(modifier = Modifier.size(Dimension.D1200))
+        }
     }
 }
 
@@ -267,7 +582,7 @@ private fun RunningBody(engine: RunnerState.Running, onBg: ColorResource, paused
 
     Text(
         text = if (paused) "Paused" else engine.currentBlock.name,
-        typography = AppTheme.typography.Display.D1500,
+        typography = AppTheme.typography.Display.D1200,
         color = onBg,
         textAlign = TextAlign.Center,
     )
@@ -338,7 +653,7 @@ private fun FinishedBody(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(10.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(5.dp)),
+                .clip(RoundedCornerShape(5.dp)),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             val total = engine.timer.blocks.sumOf { it.duration.inWholeSeconds.toInt() }.coerceAtLeast(1)
@@ -349,7 +664,7 @@ private fun FinishedBody(
                         .weight(weight)
                         .fillMaxWidth()
                         .height(10.dp)
-                        .background(androidx.compose.ui.graphics.Color(block.colorArgb)),
+                        .background(Color(block.colorArgb)),
                 )
             }
         }
@@ -372,8 +687,8 @@ private fun FinishedBody(
             text = "Done",
             typography = AppTheme.typography.Label.L600,
             color = ColorResource.FromColor(
-                androidx.compose.ui.graphics.Color.Black.takeIf { onBg.color == androidx.compose.ui.graphics.Color.White }
-                    ?: androidx.compose.ui.graphics.Color.White,
+                Color.Black.takeIf { onBg.color == Color.White }
+                    ?: Color.White,
                 "done-fg",
             ),
         )
@@ -466,7 +781,7 @@ private fun SummaryCards(engine: RunnerState.Running, onBg: ColorResource) {
         horizontalArrangement = Arrangement.spacedBy(Dimension.D500),
     ) {
         when (engine.phase) {
-            com.dangerfield.hiittimer.features.timers.BlockRole.Warmup -> {
+            BlockRole.Warmup -> {
                 val position = engine.blockIndex  // 0-based within warmup
                 SummaryPill(
                     label = "Warm up",
@@ -475,7 +790,7 @@ private fun SummaryCards(engine: RunnerState.Running, onBg: ColorResource) {
                     modifier = Modifier.weight(1f),
                 )
             }
-            com.dangerfield.hiittimer.features.timers.BlockRole.Cycle -> {
+            BlockRole.Cycle -> {
                 val cycleBlockIdx = (engine.blockIndex - warmupCount) % cycleBlockCount.coerceAtLeast(1)
                 SummaryPill(
                     label = "Block",
@@ -490,7 +805,7 @@ private fun SummaryCards(engine: RunnerState.Running, onBg: ColorResource) {
                     modifier = Modifier.weight(1f),
                 )
             }
-            com.dangerfield.hiittimer.features.timers.BlockRole.Cooldown -> {
+            BlockRole.Cooldown -> {
                 val cooldownStart = warmupCount + cycleBlockCount * timer.cycleCount
                 val position = engine.blockIndex - cooldownStart
                 SummaryPill(
@@ -589,6 +904,7 @@ private fun ProgressRing(
 private fun BottomControls(
     paused: Boolean,
     finished: Boolean,
+    disabled: Boolean,
     soundMode: SoundMode,
     onToggleSound: () -> Unit,
     onPauseResume: () -> Unit,
@@ -601,6 +917,8 @@ private fun BottomControls(
         return
     }
 
+    val pauseOrSkipEnabled = !disabled
+
     var showLabel by remember { mutableStateOf(false) }
     var labelKey by remember { mutableStateOf(0) }
 
@@ -611,7 +929,7 @@ private fun BottomControls(
 
     LaunchedEffect(labelKey) {
         if (showLabel) {
-            kotlinx.coroutines.delay(1500)
+            delay(1500)
             showLabel = false
         }
     }
@@ -641,17 +959,17 @@ private fun BottomControls(
                 icon = if (paused) Icons.Play("Resume") else Icons.Pause("Pause"),
                 iconSize = IconSize.Largest,
                 padding = Dimension.D800,
-                backgroundColor = onBg,
+                backgroundColor = if (pauseOrSkipEnabled) onBg else onBg.withAlpha(0.4f),
                 contentColor = ColorResource.FromColor(blockColor, "play-fg"),
-                onClick = onPauseResume,
+                onClick = if (pauseOrSkipEnabled) onPauseResume else ({}),
             )
             CircleIcon(
                 icon = Icons.SkipNext("Skip block"),
                 iconSize = IconSize.Medium,
                 padding = Dimension.D500,
-                backgroundColor = onBg.withAlpha(0.14f),
-                contentColor = onBg,
-                onClick = onSkip,
+                backgroundColor = onBg.withAlpha(if (pauseOrSkipEnabled) 0.14f else 0.06f),
+                contentColor = if (pauseOrSkipEnabled) onBg else onBg.withAlpha(0.4f),
+                onClick = if (pauseOrSkipEnabled) onSkip else ({}),
             )
         }
 
@@ -663,11 +981,11 @@ private fun BottomControls(
             SoundMode.Voice -> "Voice"
         }
 
-        Box(modifier = Modifier.height(Dimension.D500)) {
-            androidx.compose.animation.AnimatedVisibility(
+        Column(modifier = Modifier.height(Dimension.D500)) {
+            AnimatedVisibility(
                 visible = showLabel,
-                enter = androidx.compose.animation.fadeIn(),
-                exit = androidx.compose.animation.fadeOut(),
+                enter = fadeIn(),
+                exit = fadeOut(),
             ) {
                 Text(
                     text = labelText,
@@ -753,7 +1071,7 @@ private fun RunnerContentRunningPreview() {
     PreviewContent(backgroundColor = null) {
         RunnerContent(
             state = RunnerUiState(timer = sampleRunnerTimer, engineState = sampleRunning),
-            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onStop = {}, onSupportClick = {},
+            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {},
         )
     }
 }
@@ -767,7 +1085,26 @@ private fun RunnerContentPausedPreview() {
                 timer = sampleRunnerTimer,
                 engineState = RunnerState.Paused(sampleRunning),
             ),
-            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onStop = {}, onSupportClick = {},
+            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {},
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun RunnerContentPreRollPreview() {
+    PreviewContent(backgroundColor = null) {
+        RunnerContent(
+            state = RunnerUiState(
+                timer = sampleRunnerTimer,
+                engineState = RunnerState.PreRoll(
+                    timer = sampleRunnerTimer,
+                    firstBlock = sampleWork,
+                    remaining = 2.seconds,
+                    phase = 2,
+                ),
+            ),
+            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {},
         )
     }
 }
@@ -786,7 +1123,26 @@ private fun RunnerContentFinishedPreview() {
                     completedRounds = 8,
                 ),
             ),
-            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onStop = {}, onSupportClick = {},
+            onExit = {},
+            onToggleSound = {},
+            onPause = {},
+            onResume = {},
+            onSkip = {},
+            onResetBlock = {},
+            onStop = {},
+            onSupportClick = {},
+        )
+    }
+}
+
+
+@Composable
+@Preview(device = "spec:width=411dp,height=891dp,orientation=landscape")
+private fun RunnerContentRunningPreviewLandscape() {
+    PreviewContent(backgroundColor = null) {
+        RunnerContent(
+            state = RunnerUiState(timer = sampleRunnerTimer, engineState = sampleRunning),
+            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {},
         )
     }
 }

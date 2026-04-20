@@ -60,6 +60,7 @@ class IosAudioCuePlayer(
     private fun playBeep(cue: RunnerCue) {
         when (cue) {
             is RunnerCue.Countdown -> playSystemSound(SHORT_BEEP)
+            is RunnerCue.Prepare -> playSystemSound(if (cue.phase == 1) LONG_BEEP else SHORT_BEEP)
             is RunnerCue.BlockStart -> playSystemSound(LONG_BEEP)
             is RunnerCue.Halfway -> playSystemSound(SHORT_BEEP)
             RunnerCue.Finish -> playSystemSound(FINISH_SOUND)
@@ -73,6 +74,12 @@ class IosAudioCuePlayer(
     private fun playVoice(cue: RunnerCue) {
         val phrase = when (cue) {
             is RunnerCue.Countdown -> cue.remainingSeconds.toString()
+            is RunnerCue.Prepare -> when (cue.phase) {
+                3 -> "Get ready"
+                2 -> "Get set"
+                1 -> "Go"
+                else -> cue.phase.toString()
+            }
             is RunnerCue.BlockStart -> cue.block.name
             is RunnerCue.Halfway -> "Halfway"
             RunnerCue.Finish -> "Done"
@@ -80,6 +87,7 @@ class IosAudioCuePlayer(
 
         val shouldFlush = when (cue) {
             is RunnerCue.BlockStart, RunnerCue.Finish -> true
+            is RunnerCue.Prepare -> cue.phase == 3
             else -> false
         }
 

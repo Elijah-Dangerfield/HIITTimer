@@ -44,6 +44,7 @@ class RunnerViewModel(
             RunnerAction.Pause -> engine?.pause()
             RunnerAction.Resume -> viewModelScope.launch { engine?.resume() }
             RunnerAction.Skip -> engine?.skip()
+            RunnerAction.ResetBlock -> engine?.resetCurrentBlock()
             RunnerAction.ToggleSound -> {
                 val next = when (state.soundMode) {
                     SoundMode.Off -> SoundMode.Beeps
@@ -149,6 +150,7 @@ sealed interface RunnerAction {
     data object Pause : RunnerAction
     data object Resume : RunnerAction
     data object Skip : RunnerAction
+    data object ResetBlock : RunnerAction
     data object ToggleSound : RunnerAction
     data object Stop : RunnerAction
 }

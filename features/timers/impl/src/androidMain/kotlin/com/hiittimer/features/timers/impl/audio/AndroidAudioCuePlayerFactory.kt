@@ -122,6 +122,10 @@ class AndroidAudioCuePlayer(
     private fun playBeep(cue: RunnerCue) {
         when (cue) {
             is RunnerCue.Countdown -> toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, ToneShortMs)
+            is RunnerCue.Prepare -> toneGen.startTone(
+                if (cue.phase == 1) ToneGenerator.TONE_PROP_ACK else ToneGenerator.TONE_PROP_BEEP,
+                if (cue.phase == 1) ToneLongMs else ToneShortMs,
+            )
             is RunnerCue.BlockStart -> toneGen.startTone(ToneGenerator.TONE_PROP_ACK, ToneLongMs)
             is RunnerCue.Halfway -> toneGen.startTone(ToneGenerator.TONE_PROP_PROMPT, ToneShortMs)
             RunnerCue.Finish -> toneGen.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, ToneLongMs)
@@ -131,6 +135,12 @@ class AndroidAudioCuePlayer(
     private fun playVoice(cue: RunnerCue) {
         val phrase = when (cue) {
             is RunnerCue.Countdown -> cue.remainingSeconds.toString()
+            is RunnerCue.Prepare -> when (cue.phase) {
+                3 -> "Get ready"
+                2 -> "Get set"
+                1 -> "Go"
+                else -> cue.phase.toString()
+            }
             is RunnerCue.BlockStart -> cue.block.name
             is RunnerCue.Halfway -> "Halfway"
             RunnerCue.Finish -> "Done"
@@ -139,6 +149,7 @@ class AndroidAudioCuePlayer(
             val queueMode = when (cue) {
                 is RunnerCue.BlockStart -> TextToSpeech.QUEUE_FLUSH
                 RunnerCue.Finish -> TextToSpeech.QUEUE_FLUSH
+                is RunnerCue.Prepare -> if (cue.phase == 3) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
                 else -> TextToSpeech.QUEUE_ADD
             }
             tts?.speak(phrase, queueMode, null, phrase)
