@@ -2,6 +2,7 @@ package com.dangerfield.hiittimer.plugin
 
 import com.android.build.api.dsl.ApplicationExtension
 import com.dangerfield.hiittimer.ext.ConfigurationExtension
+import com.dangerfield.hiittimer.util.configureReleaseSigning
 import com.dangerfield.hiittimer.util.SharedConstants
 import com.dangerfield.hiittimer.util.configureAndroid
 import com.dangerfield.hiittimer.util.configureKotlinInject
@@ -85,12 +86,15 @@ class ApplicationConventionPlugin : Plugin<Project> {
                     }
                 }
 
+                val releaseSigning = configureReleaseSigning(this)
+
                 buildTypes {
                     debug {
                         applicationIdSuffix = ".debug"
                     }
                     release {
                         isMinifyEnabled = false
+                        signingConfig = releaseSigning ?: signingConfigs.getByName("debug")
                     }
                 }
             }
