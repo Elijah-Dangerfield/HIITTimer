@@ -53,6 +53,7 @@ import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import androidx.compose.ui.tooling.preview.Preview
 import kotlin.time.Duration.Companion.seconds
 import com.dangerfield.hiittimer.libraries.ui.Elevation
+import com.dangerfield.hiittimer.libraries.ui.components.ProgressRow
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
 import com.dangerfield.hiittimer.libraries.ui.components.Surface
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonDanger
@@ -1002,7 +1003,6 @@ private fun TotalProgress(elapsed: Duration, total: Duration, onBg: ColorResourc
     val totalMs = total.inWholeMilliseconds.coerceAtLeast(1L)
     val elapsedMs = elapsed.inWholeMilliseconds.coerceAtLeast(0L)
     val fraction = (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
-    val animated by animateFloatAsState(targetValue = fraction, label = "total-progress")
 
     val elapsedSeconds = (elapsedMs / 1000L).toInt()
     val remainingSeconds = ((totalMs - elapsedMs) / 1000L).toInt().coerceAtLeast(0)
@@ -1024,19 +1024,12 @@ private fun TotalProgress(elapsed: Duration, total: Duration, onBg: ColorResourc
             )
         }
         Spacer(modifier = Modifier.height(Dimension.D300))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .background(onBg.color.copy(alpha = 0.2f)),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(animated)
-                    .height(6.dp)
-                    .background(onBg.color),
-            )
-        }
+        ProgressRow(
+            progressPercent = fraction,
+            backgroundColor = onBg.withAlpha(0.2f),
+            progressColor = onBg,
+            modifier = Modifier.height(6.dp),
+        )
     }
 }
 
