@@ -1,6 +1,6 @@
-# HIIT Timer Scripts
+# Rounds Scripts
 
-This directory contains utility scripts for the HIIT Timer project.
+This directory contains utility scripts for the Rounds project.
 
 ## init_project.main.kts
 

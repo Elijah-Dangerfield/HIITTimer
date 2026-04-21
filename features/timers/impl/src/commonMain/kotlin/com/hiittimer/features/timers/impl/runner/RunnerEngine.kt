@@ -196,10 +196,13 @@ class RunnerEngine(private val timer: Timer) {
             lastSecondEmitted = remainingSecs
             if (remainingSecs in 1..3) emitCue(RunnerCue.Countdown(remainingSecs))
         }
-        val halfwayMark = current.currentBlock.duration / 2
-        if (!halfwayEmitted && (current.currentBlock.duration - newRemaining) >= halfwayMark) {
-            halfwayEmitted = true
-            emitCue(RunnerCue.Halfway(current.currentBlock))
+        val blockDuration = current.currentBlock.duration
+        if (blockDuration >= MIN_HALFWAY_BLOCK_DURATION) {
+            val halfwayMark = blockDuration / 2
+            if (!halfwayEmitted && (blockDuration - newRemaining) >= halfwayMark) {
+                halfwayEmitted = true
+                emitCue(RunnerCue.Halfway(current.currentBlock))
+            }
         }
         _state.value = current.copy(
             remaining = newRemaining,
@@ -257,6 +260,10 @@ class RunnerEngine(private val timer: Timer) {
     )
 
     private companion object {
+        /** Skip the halfway cue for blocks shorter than this. Below 10s the halfway mark
+         *  collides with or is immediately chased by the 3-2-1 countdown, making it noise. */
+        val MIN_HALFWAY_BLOCK_DURATION: Duration = 10.seconds
+
         fun buildSequence(timer: Timer): List<SequenceEntry> = buildList {
             timer.warmupBlocks.forEach { add(SequenceEntry(it, BlockRole.Warmup, 0)) }
             repeat(timer.cycleCount) { round ->

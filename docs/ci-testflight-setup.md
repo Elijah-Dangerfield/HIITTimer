@@ -7,7 +7,7 @@ The `ios-testflight` workflow builds a Release `.ipa` on a `macos-14` runner, si
 1. **Apple Developer Program membership.** $99/year, required for TestFlight. The free personal team does not work with CI.
 2. **Team ID.** Find it at <https://developer.apple.com/account> → Membership → Team ID (10-character alphanumeric).
 3. **Bundle ID.** The app uses `com.dangerfield.hiittimer.HIITTimer`. Register it at <https://developer.apple.com/account/resources/identifiers/list>.
-4. **App Store Connect app record.** Create the app at <https://appstoreconnect.apple.com/apps> with that bundle ID, a name (`HIIT Timer`), and SKU. This is what TestFlight attaches builds to.
+4. **App Store Connect app record.** Create the app at <https://appstoreconnect.apple.com/apps> with that bundle ID, a name (`Rounds`), and SKU. This is what TestFlight attaches builds to.
 5. **App Store Connect API key.** At <https://appstoreconnect.apple.com/access/integrations/api> create a new key with **App Manager** role.
    - Save the `.p8` file (you only get one download).
    - Note the **Key ID** (10-char) and **Issuer ID** (UUID at the top of the Keys tab).

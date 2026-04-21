@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person4
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.RecordVoiceOver
@@ -286,6 +287,10 @@ enum class Icons(
 
     VolumeUp(
         default = androidx.compose.material.icons.Icons.Filled.VolumeUp,
+    ),
+
+    VolumeDown(
+        default = androidx.compose.material.icons.Icons.AutoMirrored.Filled.VolumeDown,
     ),
 
     VolumeOff(

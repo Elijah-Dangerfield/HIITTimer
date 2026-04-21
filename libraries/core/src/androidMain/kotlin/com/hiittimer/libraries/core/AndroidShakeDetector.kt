@@ -74,26 +74,17 @@ class AndroidShakeDetector(
         if (acceleration > SHAKE_THRESHOLD) {
             if (currentTime - lastShakeTime > SHAKE_COOLDOWN_MS) {
                 lastShakeTime = currentTime
-                
-                val intensity = when {
-                    acceleration > VIGOROUS_THRESHOLD -> ShakeIntensity.VIGOROUS
-                    acceleration > NORMAL_THRESHOLD -> ShakeIntensity.NORMAL
-                    else -> ShakeIntensity.GENTLE
-                }
-                
-                shakeChannel.trySend(ShakeEvent(currentTime, intensity))
+                shakeChannel.trySend(ShakeEvent(currentTime))
             }
         }
     }
-    
+
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         // Not needed
     }
-    
+
     companion object {
         private const val SHAKE_THRESHOLD = 800
-        private const val NORMAL_THRESHOLD = 1200
-        private const val VIGOROUS_THRESHOLD = 2000
         private const val SHAKE_COOLDOWN_MS = 1500L
         private const val SHAKE_SAMPLE_INTERVAL_MS = 100
     }

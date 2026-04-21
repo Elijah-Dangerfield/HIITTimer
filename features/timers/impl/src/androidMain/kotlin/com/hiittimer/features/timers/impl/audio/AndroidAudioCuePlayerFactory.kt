@@ -11,12 +11,13 @@ import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import com.dangerfield.hiittimer.features.timers.CueRole
 import com.dangerfield.hiittimer.features.timers.SoundMode
 import com.dangerfield.hiittimer.features.timers.SoundPack
 import com.dangerfield.hiittimer.features.timers.impl.runner.RunnerCue
 import com.dangerfield.hiittimer.libraries.core.logging.KLog
 import com.dangerfield.hiittimer.libraries.flowroutines.AppCoroutineScope
-import hiittimer.features.timers.impl.generated.resources.Res
+import rounds.features.timers.impl.generated.resources.Res
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -68,18 +69,35 @@ private class AndroidAudioCuePlayer(
         .setAudioAttributes(focusAttributes)
         .build()
 
-    private var mode: SoundMode = SoundMode.Beeps
-    private var pack: SoundPack = SoundPack.Classic
+    private var masterEnabled: Boolean = true
+    private val modes: MutableMap<CueRole, SoundMode> =
+        CueRole.entries.associateWith { SoundMode.Beeps }.toMutableMap()
     private var volume: Float = 0.8f
+    private var voiceId: String? = null
+    private val cuePacks: MutableMap<CueRole, SoundPack> =
+        CueRole.entries.associateWith { SoundPack.Classic }.toMutableMap()
 
-    private var shortId: Int = 0
-    private var longId: Int = 0
-    private var finishId: Int = 0
+    private val sampleIds: MutableMap<Key, Int> = mutableMapOf()
+    private val loadedIds: MutableSet<Int> = mutableSetOf()
+    private var pendingPlay: Int? = null
 
     private var tts: TextToSpeech? = null
     private var ttsReady: Boolean = false
 
     init {
+        soundPool.setOnLoadCompleteListener { _, sampleId, status ->
+            if (status != 0) {
+                logger.e { "SoundPool load failed sampleId=$sampleId status=$status" }
+                return@setOnLoadCompleteListener
+            }
+            loadedIds += sampleId
+            val pending = pendingPlay
+            if (pending != null && pending == sampleId) {
+                soundPool.play(sampleId, volume, volume, 1, 0, 1f)
+                pendingPlay = null
+            }
+        }
+
         tts = TextToSpeech(context.applicationContext) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.getDefault()
@@ -93,20 +111,42 @@ private class AndroidAudioCuePlayer(
                     override fun onError(utteranceId: String?, errorCode: Int) = Unit
                 })
                 ttsReady = true
+                applyVoice()
             }
         }
-        loadPack(pack)
+
+        appScope.launch {
+            SoundPack.entries.forEach { pack ->
+                CueSample.entries.forEach { sample ->
+                    val id = loadSound(pack, sample)
+                    if (id != 0) sampleIds[Key(pack, sample)] = id
+                }
+            }
+        }
     }
 
-    override fun setMode(mode: SoundMode) {
-        this.mode = mode
+    override fun setMasterEnabled(enabled: Boolean) {
+        this.masterEnabled = enabled
     }
 
-    override fun setSoundPack(pack: SoundPack) {
-        if (this.pack == pack) return
-        this.pack = pack
-        unloadCurrentPack()
-        loadPack(pack)
+    override fun setMode(role: CueRole, mode: SoundMode) {
+        modes[role] = mode
+    }
+
+    override fun setCuePack(role: CueRole, pack: SoundPack) {
+        cuePacks[role] = pack
+    }
+
+    override fun setVoice(voiceId: String?) {
+        this.voiceId = voiceId?.takeIf { it.isNotBlank() }
+        applyVoice()
+    }
+
+    private fun applyVoice() {
+        val t = tts ?: return
+        val id = voiceId
+        val voice = id?.let { vid -> t.voices?.firstOrNull { it.name == vid } }
+        if (voice != null) t.voice = voice
     }
 
     override fun setVolume(volume: Float) {
@@ -138,7 +178,9 @@ private class AndroidAudioCuePlayer(
     }
 
     override fun play(cue: RunnerCue) {
-        when (mode) {
+        if (!masterEnabled) return
+        val role = cue.route().role
+        when (modes[role] ?: SoundMode.Beeps) {
             SoundMode.Off -> Unit
             SoundMode.Beeps -> {
                 requestDucking(FocusHoldShortMs)
@@ -152,15 +194,21 @@ private class AndroidAudioCuePlayer(
     }
 
     private fun playBeep(cue: RunnerCue) {
-        val id = when (cue) {
-            is RunnerCue.Countdown -> shortId
-            is RunnerCue.Prepare -> if (cue.phase == 1) longId else shortId
-            is RunnerCue.BlockStart -> longId
-            is RunnerCue.Halfway -> shortId
-            RunnerCue.Finish -> finishId
+        val routing = cue.route()
+        val pack = cuePacks[routing.role] ?: SoundPack.Classic
+        val id = sampleIds[Key(pack, routing.sample)]
+        if (id == null) {
+            appScope.launch {
+                val loaded = loadSound(pack, routing.sample)
+                if (loaded != 0) sampleIds[Key(pack, routing.sample)] = loaded
+            }
+            return
         }
-        if (id == 0) return
-        soundPool.play(id, volume, volume, /* priority = */ 1, /* loop = */ 0, /* rate = */ 1f)
+        if (id in loadedIds) {
+            soundPool.play(id, volume, volume, 1, 0, 1f)
+        } else {
+            pendingPlay = id
+        }
     }
 
     private fun playVoice(cue: RunnerCue) {
@@ -192,23 +240,17 @@ private class AndroidAudioCuePlayer(
         tts?.speak(phrase, queueMode, params, phrase)
     }
 
-    private fun loadPack(pack: SoundPack) {
-        appScope.launch {
-            val prefix = pack.name.lowercase()
-            val short = loadSound("files/sounds/${prefix}_short.wav")
-            val long = loadSound("files/sounds/${prefix}_long.wav")
-            val finish = loadSound("files/sounds/${prefix}_finish.wav")
-            shortId = short
-            longId = long
-            finishId = finish
+    private suspend fun loadSound(pack: SoundPack, sample: CueSample): Int {
+        val prefix = pack.name.lowercase()
+        val suffix = when (sample) {
+            CueSample.Short -> "short"
+            CueSample.Long -> "long"
+            CueSample.Finish -> "finish"
         }
-    }
-
-    private suspend fun loadSound(resourcePath: String): Int {
+        val resourcePath = "files/sounds/${prefix}_$suffix.wav"
         val bytes = runCatching { Res.readBytes(resourcePath) }
             .onFailure { logger.e(it) { "failed to read $resourcePath" } }
             .getOrNull() ?: return 0
-        // SoundPool.load requires a file path. Write to cache once, then load.
         val fileName = resourcePath.substringAfterLast('/')
         val cached = File(context.cacheDir, "cues/$fileName").apply {
             parentFile?.mkdirs()
@@ -216,28 +258,24 @@ private class AndroidAudioCuePlayer(
                 writeBytes(bytes)
             }
         }
-        return soundPool.load(cached.absolutePath, /* priority = */ 1)
-    }
-
-    private fun unloadCurrentPack() {
-        if (shortId != 0) soundPool.unload(shortId)
-        if (longId != 0) soundPool.unload(longId)
-        if (finishId != 0) soundPool.unload(finishId)
-        shortId = 0
-        longId = 0
-        finishId = 0
+        return soundPool.load(cached.absolutePath, 1)
     }
 
     override fun release() {
         handler.removeCallbacks(abandonFocus)
         abandonFocus.run()
+        pendingPlay = null
         runCatching { soundPool.release() }
+        sampleIds.clear()
+        loadedIds.clear()
         runCatching {
             tts?.stop()
             tts?.shutdown()
         }
         tts = null
     }
+
+    private data class Key(val pack: SoundPack, val sample: CueSample)
 
     companion object {
         private const val FocusHoldShortMs = 700L

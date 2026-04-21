@@ -28,6 +28,11 @@ import com.dangerfield.hiittimer.system.VerticalSpacerD1200
 import com.dangerfield.hiittimer.system.VerticalSpacerD1600
 import com.dangerfield.hiittimer.system.VerticalSpacerD500
 import androidx.compose.ui.tooling.preview.Preview
+import org.jetbrains.compose.resources.stringResource
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.blocking_error_error_code
+import rounds.libraries.resources.generated.resources.blocking_error_report_button
+import rounds.libraries.resources.generated.resources.blocking_error_report_footnote
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -63,7 +68,7 @@ internal fun BlockingErrorScreen(
             errorCode?.let {
                 Spacer(modifier = Modifier.height(Dimension.D400))
                 Text(
-                    text = "Error code: $it",
+                    text = stringResource(AppRes.string.blocking_error_error_code, it),
                     typography = AppTheme.typography.Body.B500,
                     color = AppTheme.colors.textSecondary,
                     textAlign = TextAlign.Center,
@@ -77,12 +82,12 @@ internal fun BlockingErrorScreen(
                     onClick = onReportToDevelopers,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Report to developers")
+                    Text(text = stringResource(AppRes.string.blocking_error_report_button))
                 }
 
                 VerticalSpacerD500()
 
-                Text("(which is me cause I wrote myself)")
+                Text(stringResource(AppRes.string.blocking_error_report_footnote))
 
                 VerticalSpacerD1600()
             }

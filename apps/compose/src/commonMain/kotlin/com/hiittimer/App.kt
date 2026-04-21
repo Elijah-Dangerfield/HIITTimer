@@ -6,9 +6,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dangerfield.hiittimer.libraries.core.Platform
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
@@ -44,7 +47,6 @@ import kotlin.time.Duration.Companion.seconds
 @Composable
 fun App(appComponent: AppComponent) {
     val appViewModel = appComponent.appViewModel
-    val state by appViewModel.stateFlow.collectAsStateWithLifecycle()
     val floatingWindowNavigator = remember { FloatingWindowNavigator() }
     val navController = rememberNavController(floatingWindowNavigator)
     val appRecomposeLogger = remember { KLog.withTag("AppRecompose") }
@@ -98,15 +100,11 @@ fun App(appComponent: AppComponent) {
                     navController = navController,
                     floatingWindowNavigator = floatingWindowNavigator,
                     featureEntryPoints = appComponent.featureEntryPoints,
-                    startDestination = state.startDestination,
+                    startDestination = appViewModel.startDestination,
                     router = router,
                 )
 
-                if (!state.hasShownSplash) {
-                    SplashOverlay(
-                        onComplete = { appViewModel.takeAction(AppAction.MarkSplashShown) }
-                    )
-                }
+                SplashGate()
 
                 DialogHost(
                     modifier = Modifier.matchParentSize(),
@@ -207,4 +205,21 @@ private fun AppNavigation(
             router.Bind(navController)
         },
     )
+}
+
+/**
+ * Isolates the splash-overlay's `hasShownSplash` state read into its own composable
+ * so that flipping it cannot recompose `App` and, in particular, cannot cause
+ * `AppNavigation` / `NavHost` to rebuild its graph — which was previously pushing
+ * a second copy of the start destination onto the back stack.
+ *
+ * Only renders on iOS. Android uses the native splash API instead.
+ */
+@Composable
+private fun SplashGate() {
+    if (BuildInfo.platform != Platform.iOS) return
+    var hasShownSplash by rememberSaveable { mutableStateOf(false) }
+    if (!hasShownSplash) {
+        SplashOverlay(onComplete = { hasShownSplash = true })
+    }
 }

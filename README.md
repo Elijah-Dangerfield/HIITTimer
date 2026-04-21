@@ -1,6 +1,6 @@
-# HIIT Timer
+# Rounds
 
-A Kotlin Multiplatform template with a clean, modular architecture using Compose Multiplatform, Room database, and a base ViewModel that encourages unidirectional data flow.
+A Kotlin Multiplatform HIIT / interval timer app, built with Compose Multiplatform, Room, and a unidirectional-data-flow ViewModel base class.
 
 ## Build & Run
 

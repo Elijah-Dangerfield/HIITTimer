@@ -19,6 +19,7 @@ kotlin {
             implementation(projects.libraries.core)
             // TODO honestly the hiittimer library should expose the component that require hiittimer domain
             implementation(projects.libraries.hiittimer)
+            implementation(projects.libraries.resources)
 
             api(compose.ui)
             api(compose.uiUtil)

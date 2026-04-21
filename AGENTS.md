@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidelines for AI agents working in the HIIT Timer repository.
+Guidelines for AI agents working in the Rounds codebase (repo name `HIITTimer` is historical and stays for continuity with CI, bundle IDs, and paths — the user-facing product is `Rounds`).
 
 ## Overview
 
@@ -89,6 +89,31 @@ dialog<DialogRoute> { backStackEntry, dialogState -> ... }
 - No comments in code
 - Custom UI components in libraries/ui—avoid Material directly
 - Check `ComposeApp.h` for Swift names of Kotlin types before using in Swift
+
+## Conventional commits (required)
+
+Every PR title must be a conventional commit. PRs are squash-merged, so the title becomes the commit message, and [release-please](https://github.com/googleapis/release-please) derives the next version bump from commit types.
+
+| Prefix | Version bump | Use for |
+|---|---|---|
+| `fix:` | patch (0.1.0 → 0.1.1) | Bug fixes |
+| `feat:` | minor (0.1.0 → 0.2.0) | New user-facing features |
+| `feat!:` or trailer `BREAKING CHANGE:` | major (0.1.0 → 1.0.0) | Breaking changes |
+| `perf:` | patch | Performance improvements |
+| `refactor:`, `docs:`, `style:`, `test:`, `build:`, `ci:`, `chore:` | none | Everything else (still allowed) |
+
+Subject starts with a lowercase letter and describes the end-user effect, not the implementation. The `commitlint.yml` workflow enforces this on PRs.
+
+## Automation routines
+
+Background automation runs in GitHub Actions. Any AI agent opening PRs should match these conventions so the pipeline handles them correctly.
+
+- **`ai-autofix` label** on a PR → auto-merge once CI is green. Use for Sentry-triage fixes and similar low-risk patches.
+- **Sentry-triage cron** ([`sentry-triage.yml`](.github/workflows/sentry-triage.yml)) runs every Monday with [`scripts/prompts/sentry-triage.md`](scripts/prompts/sentry-triage.md) as the prompt. Edit that file — not the workflow — to change behavior.
+- **release-please** owns `versions.properties`, `apps/ios/Configuration/Config.xcconfig` (MARKETING_VERSION), and `CHANGELOG.md`. Do not touch them in feature PRs.
+- **Never edit `.github/workflows/*`** from an autofix PR — CI changes are out of scope for the triage routine and need a human.
+
+See [`docs/release-automation.md`](docs/release-automation.md) for the full release pipeline.
 
 ## iOS Notes
 

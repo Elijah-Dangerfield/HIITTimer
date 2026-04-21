@@ -95,6 +95,22 @@ sealed class ColorResource(val color: Color, val designSystemName: String) {
     object Purple600 : ColorResource(Color(0xFF8E24AA), "purple-600")
     object Purple700 : ColorResource(Color(0xFF7B1FA2), "purple-700")
 
+    // Pink - Brand primary (Rounds outer ring)
+    object Pink50 : ColorResource(Color(0xFFFCE4EC), "pink-50")
+    object Pink100 : ColorResource(Color(0xFFF8BBD0), "pink-100")
+    object Pink400 : ColorResource(Color(0xFFEC407A), "pink-400")
+    object Pink500 : ColorResource(Color(0xFFE91E63), "pink-500")
+    object Pink600 : ColorResource(Color(0xFFD81B60), "pink-600")
+    object Pink700 : ColorResource(Color(0xFFC2185B), "pink-700")
+
+    // Teal - Brand secondary (Rounds inner ring)
+    object Teal50 : ColorResource(Color(0xFFE0F7FA), "teal-50")
+    object Teal100 : ColorResource(Color(0xFFB2EBF2), "teal-100")
+    object Teal400 : ColorResource(Color(0xFF26C6DA), "teal-400")
+    object Teal500 : ColorResource(Color(0xFF00BCD4), "teal-500")
+    object Teal600 : ColorResource(Color(0xFF00ACC1), "teal-600")
+    object Teal700 : ColorResource(Color(0xFF0097A7), "teal-700")
+
     // Utility colors
     object Black : ColorResource(Color(0xFF000000), "black")
     object Black_A70 : ColorResource(Color(0xFF000000).copy(alpha = 0.7f), "black-a-70")
@@ -193,6 +209,20 @@ private val colors = listOf(
     ColorResource.Purple500,
     ColorResource.Purple600,
     ColorResource.Purple700,
+    // Pink
+    ColorResource.Pink50,
+    ColorResource.Pink100,
+    ColorResource.Pink400,
+    ColorResource.Pink500,
+    ColorResource.Pink600,
+    ColorResource.Pink700,
+    // Teal
+    ColorResource.Teal50,
+    ColorResource.Teal100,
+    ColorResource.Teal400,
+    ColorResource.Teal500,
+    ColorResource.Teal600,
+    ColorResource.Teal700,
     // Utilities
     ColorResource.Black,
     ColorResource.White

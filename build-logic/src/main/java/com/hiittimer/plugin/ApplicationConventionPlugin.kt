@@ -2,10 +2,10 @@ package com.dangerfield.hiittimer.plugin
 
 import com.android.build.api.dsl.ApplicationExtension
 import com.dangerfield.hiittimer.ext.ConfigurationExtension
-import com.dangerfield.hiittimer.util.configureReleaseSigning
 import com.dangerfield.hiittimer.util.SharedConstants
 import com.dangerfield.hiittimer.util.configureAndroid
 import com.dangerfield.hiittimer.util.configureKotlinInject
+import com.dangerfield.hiittimer.util.configureReleaseSigning
 import com.dangerfield.hiittimer.util.configureKotlinMultiplatform
 import com.dangerfield.hiittimer.util.libs
 import com.dangerfield.hiittimer.util.loadSupabaseMetadata

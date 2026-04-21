@@ -5,13 +5,21 @@ import com.dangerfield.hiittimer.features.timers.Block
 import com.dangerfield.hiittimer.features.timers.BlockRole
 import com.dangerfield.hiittimer.features.timers.ExampleTimerSeededPref
 import com.dangerfield.hiittimer.features.timers.Timer
-import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
 import com.dangerfield.hiittimer.features.timers.impl.TimerRepository
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
 import com.dangerfield.hiittimer.libraries.preferences.Preferences
+import com.dangerfield.hiittimer.system.color.defaultRunnerColors
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
+import org.jetbrains.compose.resources.getString
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.starter_block_cooldown
+import rounds.libraries.resources.generated.resources.starter_block_high_intensity
+import rounds.libraries.resources.generated.resources.starter_block_low_intensity
+import rounds.libraries.resources.generated.resources.starter_block_rest
+import rounds.libraries.resources.generated.resources.starter_block_warmup
+import rounds.libraries.resources.generated.resources.starter_timer_classic_hiit
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
@@ -39,42 +47,42 @@ class TimerListViewModel(
             return
         }
         repository.createWithBlocks(
-            name = "Classic HIIT",
+            name = getString(AppRes.string.starter_timer_classic_hiit),
             cycleCount = 6,
             blocks = listOf(
                 Block(
                     id = Uuid.random().toString(),
-                    name = "Warm up",
+                    name = getString(AppRes.string.starter_block_warmup),
                     duration = 40.seconds,
-                    colorArgb = ColorPalette.warmupArgb,
+                    colorArgb = defaultRunnerColors.warmupArgb,
                     role = BlockRole.Warmup,
                 ),
                 Block(
                     id = Uuid.random().toString(),
-                    name = "High intensity",
+                    name = getString(AppRes.string.starter_block_high_intensity),
                     duration = 30.seconds,
-                    colorArgb = ColorPalette.defaultWorkArgb,
+                    colorArgb = defaultRunnerColors.defaultWorkArgb,
                     role = BlockRole.Cycle,
                 ),
                 Block(
                     id = Uuid.random().toString(),
-                    name = "Rest",
+                    name = getString(AppRes.string.starter_block_rest),
                     duration = 5.seconds,
-                    colorArgb = ColorPalette.defaultRestArgb,
+                    colorArgb = defaultRunnerColors.defaultRestArgb,
                     role = BlockRole.Cycle,
                 ),
                 Block(
                     id = Uuid.random().toString(),
-                    name = "Low intensity",
+                    name = getString(AppRes.string.starter_block_low_intensity),
                     duration = 60.seconds,
-                    colorArgb = ColorPalette.lowIntensityArgb,
+                    colorArgb = defaultRunnerColors.lowIntensityArgb,
                     role = BlockRole.Cycle,
                 ),
                 Block(
                     id = Uuid.random().toString(),
-                    name = "Cool down",
+                    name = getString(AppRes.string.starter_block_cooldown),
                     duration = 45.seconds,
-                    colorArgb = ColorPalette.lowIntensityArgb,
+                    colorArgb = defaultRunnerColors.lowIntensityArgb,
                     role = BlockRole.Cooldown,
                 ),
             ),
@@ -87,10 +95,7 @@ class TimerListViewModel(
             is TimerListAction.Receive -> action.updateState {
                 it.copy(timers = action.timers, loading = false)
             }
-            TimerListAction.CreateNew -> {
-                val timer = repository.create(name = "")
-                sendEvent(TimerListEvent.OpenDetail(timer.id, isNew = true))
-            }
+            TimerListAction.CreateNew -> sendEvent(TimerListEvent.OpenPresets)
             is TimerListAction.Open -> sendEvent(TimerListEvent.OpenDetail(action.timerId, isNew = false))
             is TimerListAction.Start -> sendEvent(TimerListEvent.StartRunner(action.timerId))
             TimerListAction.OpenSettings -> sendEvent(TimerListEvent.OpenSettings)
@@ -119,6 +124,7 @@ sealed interface TimerListEvent {
     data class OpenDetail(val timerId: String, val isNew: Boolean) : TimerListEvent
     data class StartRunner(val timerId: String) : TimerListEvent
     data object OpenSettings : TimerListEvent
+    data object OpenPresets : TimerListEvent
 }
 
 sealed interface TimerListAction {

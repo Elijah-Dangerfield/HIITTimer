@@ -5,13 +5,20 @@ import com.dangerfield.hiittimer.features.timers.Block
 import com.dangerfield.hiittimer.features.timers.BlockRole
 import com.dangerfield.hiittimer.features.timers.SkipBlockDeleteConfirmationPref
 import com.dangerfield.hiittimer.features.timers.Timer
-import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
 import com.dangerfield.hiittimer.features.timers.impl.TimerRepository
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
 import com.dangerfield.hiittimer.libraries.preferences.Preferences
+import com.dangerfield.hiittimer.system.color.defaultRunnerColors
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
+import org.jetbrains.compose.resources.getString
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.common_untitled
+import rounds.libraries.resources.generated.resources.starter_block_cooldown
+import rounds.libraries.resources.generated.resources.starter_block_rest
+import rounds.libraries.resources.generated.resources.starter_block_warmup
+import rounds.libraries.resources.generated.resources.starter_block_work
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
@@ -45,7 +52,7 @@ class TimerDetailViewModel(
             is TimerDetailAction.RenameTimer -> {
                 action.updateState { it.copy(nameField = action.name) }
                 val current = state.timer ?: return
-                val nameToSave = action.name.ifBlank { "Untitled" }
+                val nameToSave = action.name.ifBlank { getString(AppRes.string.common_untitled) }
                 if (current.name != nameToSave) {
                     repository.updateTimer(current.copy(name = nameToSave))
                 }
@@ -59,25 +66,28 @@ class TimerDetailViewModel(
                 val block = when (action.role) {
                     BlockRole.Warmup -> Block(
                         id = Uuid.random().toString(),
-                        name = "Warm up",
+                        name = getString(AppRes.string.starter_block_warmup),
                         duration = 30.seconds,
-                        colorArgb = ColorPalette.warmupArgb,
+                        colorArgb = defaultRunnerColors.warmupArgb,
                         role = BlockRole.Warmup,
                     )
                     BlockRole.Cooldown -> Block(
                         id = Uuid.random().toString(),
-                        name = "Cool down",
+                        name = getString(AppRes.string.starter_block_cooldown),
                         duration = 30.seconds,
-                        colorArgb = ColorPalette.lowIntensityArgb,
+                        colorArgb = defaultRunnerColors.lowIntensityArgb,
                         role = BlockRole.Cooldown,
                     )
                     BlockRole.Cycle -> {
                         val alternatesRest = (timer.cycleBlocks.size % 2 == 1)
                         Block(
                             id = Uuid.random().toString(),
-                            name = if (alternatesRest) "Rest" else "Work",
+                            name = getString(
+                                if (alternatesRest) AppRes.string.starter_block_rest
+                                else AppRes.string.starter_block_work
+                            ),
                             duration = if (alternatesRest) 15.seconds else 30.seconds,
-                            colorArgb = if (alternatesRest) ColorPalette.defaultRestArgb else ColorPalette.defaultWorkArgb,
+                            colorArgb = if (alternatesRest) defaultRunnerColors.defaultRestArgb else defaultRunnerColors.defaultWorkArgb,
                             role = BlockRole.Cycle,
                         )
                     }

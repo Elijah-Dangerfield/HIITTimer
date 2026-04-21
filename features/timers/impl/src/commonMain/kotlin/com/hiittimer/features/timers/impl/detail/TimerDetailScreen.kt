@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -35,16 +36,20 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,19 +57,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dangerfield.hiittimer.features.timers.Block
 import com.dangerfield.hiittimer.features.timers.BlockRole
 import com.dangerfield.hiittimer.features.timers.Timer
-import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
+import com.dangerfield.hiittimer.features.timers.impl.BlockStrip
 import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
+import com.dangerfield.hiittimer.system.color.defaultRunnerColors
 import androidx.compose.ui.tooling.preview.Preview
 import kotlin.time.Duration.Companion.seconds
 import com.dangerfield.hiittimer.libraries.ui.components.DropdownMenu
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
-import com.dangerfield.hiittimer.libraries.ui.components.Surface
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonDanger
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonGhost
 import com.dangerfield.hiittimer.libraries.ui.components.checkbox.Checkbox
-import com.dangerfield.hiittimer.libraries.ui.components.dialog.Dialog
-import com.dangerfield.hiittimer.libraries.ui.components.dialog.rememberDialogState
+import com.dangerfield.hiittimer.libraries.ui.components.dialog.BasicDialog
 import com.dangerfield.hiittimer.libraries.ui.components.icon.Icon
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconSize
@@ -75,6 +79,35 @@ import com.dangerfield.hiittimer.libraries.ui.system.color.ColorResource
 import com.dangerfield.hiittimer.libraries.ui.fadingEdge
 import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.Dimension
+import org.jetbrains.compose.resources.stringResource
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.action_delete
+import rounds.libraries.resources.generated.resources.action_dont_ask_again
+import rounds.libraries.resources.generated.resources.cd_add
+import rounds.libraries.resources.generated.resources.cd_back
+import rounds.libraries.resources.generated.resources.cd_decrease_rounds
+import rounds.libraries.resources.generated.resources.cd_delete
+import rounds.libraries.resources.generated.resources.cd_drag_to_reorder
+import rounds.libraries.resources.generated.resources.cd_duplicate
+import rounds.libraries.resources.generated.resources.cd_increase_rounds
+import rounds.libraries.resources.generated.resources.cd_more
+import rounds.libraries.resources.generated.resources.cd_start_workout
+import rounds.libraries.resources.generated.resources.common_cancel
+import rounds.libraries.resources.generated.resources.common_untitled
+import rounds.libraries.resources.generated.resources.timer_detail_add_block
+import rounds.libraries.resources.generated.resources.timer_detail_add_cooldown
+import rounds.libraries.resources.generated.resources.timer_detail_add_warmup
+import rounds.libraries.resources.generated.resources.timer_detail_block_untitled
+import rounds.libraries.resources.generated.resources.timer_detail_blocks_header
+import rounds.libraries.resources.generated.resources.timer_detail_cooldown_header
+import rounds.libraries.resources.generated.resources.timer_detail_delete_block_body
+import rounds.libraries.resources.generated.resources.timer_detail_delete_block_title
+import rounds.libraries.resources.generated.resources.timer_detail_menu_delete_timer
+import rounds.libraries.resources.generated.resources.timer_detail_menu_duplicate
+import rounds.libraries.resources.generated.resources.timer_detail_rounds
+import rounds.libraries.resources.generated.resources.timer_detail_rounds_count
+import rounds.libraries.resources.generated.resources.timer_detail_total_time
+import rounds.libraries.resources.generated.resources.timer_detail_warmup_header
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -146,6 +179,7 @@ private fun TimerDetailContent(
     onToggleDontAsk: (Boolean) -> Unit,
     onConfirmDeleteBlock: () -> Unit,
     onDismissDeleteBlock: () -> Unit,
+    initialMenuOpen: Boolean = false,
 ) {
     val timer = state.timer
     val lazyListState = rememberLazyListState()
@@ -163,13 +197,15 @@ private fun TimerDetailContent(
     }
     Screen(modifier = Modifier.fillMaxSize()) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            val untitled = stringResource(AppRes.string.common_untitled)
             Header(
                 onBack = onBack,
                 onDuplicate = onDuplicate,
                 onDelete = onDelete,
                 enabled = timer != null,
-                title = timer?.name?.ifBlank { "Untitled" }.orEmpty(),
+                title = timer?.name?.ifBlank { untitled }.orEmpty(),
                 titleVisible = titleInHeader,
+                initialMenuOpen = initialMenuOpen,
             )
 
             if (timer == null) return@Column
@@ -213,15 +249,16 @@ private fun Header(
     enabled: Boolean,
     title: String,
     titleVisible: Boolean,
+    initialMenuOpen: Boolean = false,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(initialMenuOpen) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Dimension.D400, vertical = Dimension.D400),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(icon = Icons.ArrowBack("Back"), onClick = onBack)
+        IconButton(icon = Icons.ArrowBack(stringResource(AppRes.string.cd_back)), onClick = onBack)
         Box(modifier = Modifier.weight(1f).padding(horizontal = Dimension.D400)) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = titleVisible,
@@ -230,7 +267,7 @@ private fun Header(
             ) {
                 Text(
                     text = title,
-                    typography = AppTheme.typography.Heading.H700,
+                    typography = AppTheme.typography.Heading.H900,
                     color = AppTheme.colors.text,
                     maxLines = 1,
                 )
@@ -238,23 +275,25 @@ private fun Header(
         }
         Box {
             IconButton(
-                icon = Icons.MoreVert("More"),
+                icon = Icons.MoreVert(stringResource(AppRes.string.cd_more)),
                 onClick = { menuOpen = true },
                 enabled = enabled,
             )
             DropdownMenu(
                 expanded = menuOpen,
                 onDismissRequest = { menuOpen = false },
-                modifier = Modifier.background(AppTheme.colors.surfacePrimary.color),
+                modifier = Modifier
+                    .background(AppTheme.colors.surfacePrimary.color)
+                    .padding(Dimension.D400),
             ) {
                 MenuRow(
-                    icon = Icons.Copy("Duplicate"),
-                    label = "Duplicate",
+                    icon = Icons.Copy(stringResource(AppRes.string.cd_duplicate)),
+                    label = stringResource(AppRes.string.timer_detail_menu_duplicate),
                     onClick = { menuOpen = false; onDuplicate() },
                 )
                 MenuRow(
-                    icon = Icons.Delete("Delete"),
-                    label = "Delete timer",
+                    icon = Icons.Delete(stringResource(AppRes.string.cd_delete)),
+                    label = stringResource(AppRes.string.timer_detail_menu_delete_timer),
                     onClick = { menuOpen = false; onDelete() },
                     destructive = true,
                 )
@@ -279,13 +318,13 @@ private fun MenuRow(
     ) {
         Icon(
             icon = icon,
-            size = IconSize.Small,
+            size = IconSize.Medium,
             color = if (destructive) AppTheme.colors.danger else AppTheme.colors.onSurfacePrimary,
         )
         Spacer(modifier = Modifier.size(Dimension.D500))
         Text(
             text = label,
-            typography = AppTheme.typography.Body.B500,
+            typography = AppTheme.typography.Body.B600,
             color = if (destructive) AppTheme.colors.danger else AppTheme.colors.onSurfacePrimary,
         )
     }
@@ -308,7 +347,15 @@ private fun DetailList(
     onNameBottomChanged: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val items: List<DetailItem> = remember(timer) { buildDetailItems(timer) }
+    val warmupLabel = stringResource(AppRes.string.timer_detail_warmup_header)
+    val blocksLabel = stringResource(AppRes.string.timer_detail_blocks_header)
+    val cooldownLabel = stringResource(AppRes.string.timer_detail_cooldown_header)
+    val addWarmupLabel = stringResource(AppRes.string.timer_detail_add_warmup)
+    val addBlockLabel = stringResource(AppRes.string.timer_detail_add_block)
+    val addCooldownLabel = stringResource(AppRes.string.timer_detail_add_cooldown)
+    val items: List<DetailItem> = remember(timer, warmupLabel, blocksLabel, cooldownLabel, addWarmupLabel, addBlockLabel, addCooldownLabel) {
+        buildDetailItems(timer, warmupLabel, blocksLabel, cooldownLabel, addWarmupLabel, addBlockLabel, addCooldownLabel)
+    }
     val keyFor: (Int) -> Any = { idx -> keyForItem(items[idx], idx) }
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         val fromItem = items.getOrNull(from.index) as? DetailItem.BlockRow ?: return@rememberReorderableLazyListState
@@ -359,7 +406,7 @@ private fun DetailList(
                 is DetailItem.SectionHeader -> item(key = "hdr-${item.title}") {
                     Text(
                         text = item.title,
-                        typography = AppTheme.typography.Label.L400,
+                        typography = AppTheme.typography.Label.L600,
                         color = AppTheme.colors.textSecondary,
                         modifier = Modifier.padding(top = Dimension.D400, bottom = Dimension.D100),
                     )
@@ -391,21 +438,29 @@ private fun DetailList(
     }
 }
 
-private fun buildDetailItems(timer: Timer): List<DetailItem> = buildList {
+private fun buildDetailItems(
+    timer: Timer,
+    warmupHeader: String,
+    blocksHeader: String,
+    cooldownHeader: String,
+    addWarmup: String,
+    addBlock: String,
+    addCooldown: String,
+): List<DetailItem> = buildList {
     add(DetailItem.Hero)
 
-    add(DetailItem.SectionHeader("WARM UP"))
+    add(DetailItem.SectionHeader(warmupHeader))
     timer.warmupBlocks.forEach { add(DetailItem.BlockRow(it)) }
-    add(DetailItem.AddRow(BlockRole.Warmup, "Add warm up"))
+    add(DetailItem.AddRow(BlockRole.Warmup, addWarmup))
 
     add(DetailItem.Rounds)
-    add(DetailItem.SectionHeader("BLOCKS"))
+    add(DetailItem.SectionHeader(blocksHeader))
     timer.cycleBlocks.forEach { add(DetailItem.BlockRow(it)) }
-    add(DetailItem.AddRow(BlockRole.Cycle, "Add block"))
+    add(DetailItem.AddRow(BlockRole.Cycle, addBlock))
 
-    add(DetailItem.SectionHeader("COOL DOWN"))
+    add(DetailItem.SectionHeader(cooldownHeader))
     timer.cooldownBlocks.forEach { add(DetailItem.BlockRow(it)) }
-    add(DetailItem.AddRow(BlockRole.Cooldown, "Add cool down"))
+    add(DetailItem.AddRow(BlockRole.Cooldown, addCooldown))
 }
 
 private fun keyForItem(item: DetailItem, index: Int): Any = when (item) {
@@ -441,7 +496,7 @@ private fun Hero(
             InlineTitleField(
                 value = nameField,
                 onValueChange = onRename,
-                placeholder = "Untitled",
+                placeholder = stringResource(AppRes.string.common_untitled),
                 requestFocus = isNew,
             )
         }
@@ -449,8 +504,8 @@ private fun Hero(
         Spacer(modifier = Modifier.height(Dimension.D700))
 
         Text(
-            text = "TOTAL TIME",
-            typography = AppTheme.typography.Label.L300,
+            text = stringResource(AppRes.string.timer_detail_total_time),
+            typography = AppTheme.typography.Label.L400,
             color = AppTheme.colors.textSecondary,
         )
         Spacer(modifier = Modifier.height(Dimension.D200))
@@ -487,7 +542,7 @@ private fun PlayButton(enabled: Boolean, onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            icon = Icons.Play("Start workout"),
+            icon = Icons.Play(stringResource(AppRes.string.cd_start_workout)),
             size = IconSize.Largest,
             color = fg,
         )
@@ -502,13 +557,17 @@ private fun InlineTitleField(
     requestFocus: Boolean = false,
 ) {
     val focusRequester = remember { FocusRequester() }
-    
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    var hasAutoFocused by rememberSaveable { mutableStateOf(false) }
+
     LaunchedEffect(requestFocus) {
-        if (requestFocus) {
+        if (requestFocus && !hasAutoFocused) {
+            hasAutoFocused = true
             focusRequester.requestFocus()
         }
     }
-    
+
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         if (value.isEmpty()) {
             Text(
@@ -523,10 +582,17 @@ private fun InlineTitleField(
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
             singleLine = true,
-            typographyToken = AppTheme.typography.Heading.H800,
+            typographyToken = AppTheme.typography.Heading.H900,
             color = AppTheme.colors.onSurfacePrimary.color,
             keyboardOptions = KeyboardOptions.Default.copy(
+                imeAction = ImeAction.Done,
                 capitalization = KeyboardCapitalization.Words,
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    keyboard?.hide()
+                    focusManager.clearFocus()
+                },
             ),
         )
     }
@@ -543,8 +609,8 @@ private fun RoundsStepper(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "ROUNDS",
-            typography = AppTheme.typography.Label.L300,
+            text = stringResource(AppRes.string.timer_detail_rounds),
+            typography = AppTheme.typography.Label.L400,
             color = AppTheme.colors.textSecondary,
         )
         Spacer(modifier = Modifier.height(Dimension.D300))
@@ -553,17 +619,17 @@ private fun RoundsStepper(
             horizontalArrangement = Arrangement.spacedBy(Dimension.D700),
         ) {
             StepperCircle(
-                icon = Icons.ChevronLeft("Decrease rounds"),
+                icon = Icons.ChevronLeft(stringResource(AppRes.string.cd_decrease_rounds)),
                 onClick = onDecrement,
                 enabled = count > 1,
             )
             Text(
-                text = "${count}x",
-                typography = AppTheme.typography.Display.D1000,
+                text = stringResource(AppRes.string.timer_detail_rounds_count, count),
+                typography = AppTheme.typography.Display.D1100,
                 color = AppTheme.colors.text,
             )
             StepperCircle(
-                icon = Icons.ChevronRight("Increase rounds"),
+                icon = Icons.ChevronRight(stringResource(AppRes.string.cd_increase_rounds)),
                 onClick = onIncrement,
                 enabled = count < 99,
             )
@@ -579,7 +645,7 @@ private fun StepperCircle(
 ) {
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(50.dp)
             .clip(CircleShape)
             .background(AppTheme.colors.surfacePrimary.color)
             .clickable(enabled = enabled) { onClick() },
@@ -593,29 +659,6 @@ private fun StepperCircle(
     }
 }
 
-@Composable
-private fun BlockStrip(blocks: List<Block>) {
-    val totalSeconds = blocks.sumOf { it.duration.inWholeSeconds.toInt() }.coerceAtLeast(1)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(8.dp)
-            .clip(RoundedCornerShape(4.dp)),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        blocks.forEach { block ->
-            val weight = (block.duration.inWholeSeconds.toFloat() / totalSeconds.toFloat())
-                .coerceAtLeast(0.02f)
-            Box(
-                modifier = Modifier
-                    .weight(weight)
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .background(Color(block.colorArgb)),
-            )
-        }
-    }
-}
 
 @Composable
 private fun BlockCard(
@@ -627,17 +670,21 @@ private fun BlockCard(
     onRequestDelete: () -> Unit,
     dragHandleModifier: Modifier,
 ) {
-    val color = Color(block.colorArgb)
+    val color = Color(block.colorArgb).copy(alpha = 1f)
     val cardBg = lerp(
         color,
         Color.White,
         if (dragging) 0.15f else 0.28f,
-    )
+    ).copy(alpha = 1f)
+
+    val onCardColor = defaultRunnerColors.onColorFor(cardBg)
+    val onCardResource = ColorResource.FromColor(onCardColor, "on-block-card")
 
     val content: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(AppTheme.colors.background.color)
                 .background(cardBg)
                 .clickable(enabled = !dragging) { onTap() }
                 .padding(horizontal = Dimension.D700, vertical = Dimension.D700),
@@ -647,20 +694,19 @@ private fun BlockCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val labelColor = ColorPalette.onColorFor(cardBg)
                 Text(
-                    text = block.name.ifBlank { "Block" },
-                    typography = AppTheme.typography.Heading.H700,
-                    color = ColorResource.FromColor(labelColor, "block-label"),
+                    text = block.name.ifBlank { stringResource(AppRes.string.timer_detail_block_untitled) },
+                    typography = AppTheme.typography.Heading.H800,
+                    color = onCardResource,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                 )
                 if (reorderable) {
                     Box(modifier = dragHandleModifier) {
                         Icon(
-                            icon = Icons.DragHandle("Drag to reorder"),
+                            icon = Icons.DragHandle(stringResource(AppRes.string.cd_drag_to_reorder)),
                             size = IconSize.Small,
-                            color = ColorResource.FromColor(labelColor.copy(alpha = 0.6f), "drag-handle"),
+                            color = ColorResource.FromColor(onCardColor.copy(alpha = 0.6f), "drag-handle"),
                         )
                     }
                 }
@@ -678,8 +724,8 @@ private fun BlockCard(
                 )
                 Text(
                     text = formatClock(block.duration.inWholeSeconds.toInt()),
-                    typography = AppTheme.typography.Display.D1000,
-                    color = AppTheme.colors.onSurfacePrimary,
+                    typography = AppTheme.typography.Display.D1100,
+                    color = onCardResource,
                 )
                 QuickAdjustButton(
                     label = "+",
@@ -714,7 +760,7 @@ private fun BlockCard(
                     contentAlignment = Alignment.CenterEnd,
                 ) {
                     Icon(
-                        icon = Icons.Delete("Delete"),
+                        icon = Icons.Delete(stringResource(AppRes.string.cd_delete)),
                         size = IconSize.Medium,
                         color = AppTheme.colors.onAccentPrimary,
                     )
@@ -759,14 +805,14 @@ private fun AddBlockRow(label: String, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.Center,
     ) {
         Icon(
-            icon = Icons.Add("Add"),
+            icon = Icons.Add(stringResource(AppRes.string.cd_add)),
             size = IconSize.Small,
             color = AppTheme.colors.accentPrimary,
         )
         Spacer(modifier = Modifier.size(Dimension.D400))
         Text(
             text = label,
-            typography = AppTheme.typography.Body.B600.SemiBold,
+            typography = AppTheme.typography.Body.B700.Bold,
             color = AppTheme.colors.accentPrimary,
         )
     }
@@ -779,26 +825,22 @@ private fun DeleteBlockConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val dialogState = rememberDialogState()
-    Dialog(state = dialogState, onDismissRequest = onDismiss) {
-        Surface(
-            color = AppTheme.colors.surfacePrimary,
-            contentColor = AppTheme.colors.onSurfacePrimary,
-            radius = com.dangerfield.hiittimer.system.Radii.Card,
-            contentPadding = PaddingValues(Dimension.D700),
-        ) {
+    BasicDialog(
+        onDismissRequest = onDismiss,
+        topContent = {
+            Text(
+                text = stringResource(AppRes.string.timer_detail_delete_block_title),
+                typography = AppTheme.typography.Heading.H700,
+            )
+        },
+        content = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Delete this block?",
-                    typography = AppTheme.typography.Heading.H700,
-                )
-                Spacer(modifier = Modifier.height(Dimension.D400))
-                Text(
-                    text = "You can't undo this.",
+                    text = stringResource(AppRes.string.timer_detail_delete_block_body),
                     typography = AppTheme.typography.Body.B500,
                     color = AppTheme.colors.textSecondary,
                 )
-                Spacer(modifier = Modifier.height(Dimension.D700))
+                Spacer(modifier = Modifier.height(Dimension.D500))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -809,25 +851,26 @@ private fun DeleteBlockConfirmationDialog(
                     Checkbox(checked = dontAskAgain, onCheckedChange = { onToggleDontAsk(it) })
                     Spacer(modifier = Modifier.size(Dimension.D400))
                     Text(
-                        text = "Don't ask again",
+                        text = stringResource(AppRes.string.action_dont_ask_again),
                         typography = AppTheme.typography.Body.B500,
                     )
                 }
-                Spacer(modifier = Modifier.height(Dimension.D500))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
-                ) {
-                    ButtonGhost(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                        Text("Cancel")
-                    }
-                    ButtonDanger(onClick = onConfirm, modifier = Modifier.weight(1f)) {
-                        Text("Delete")
-                    }
+            }
+        },
+        bottomContent = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
+            ) {
+                ButtonGhost(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(AppRes.string.common_cancel))
+                }
+                ButtonDanger(onClick = onConfirm, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(AppRes.string.action_delete))
                 }
             }
-        }
-    }
+        },
+    )
 }
 
 private fun formatClock(totalSeconds: Int): String {
@@ -848,10 +891,10 @@ private val sampleTimer: Timer = Timer(
     name = "Tabata",
     cycleCount = 8,
     blocks = listOf(
-        Block("w1", "Warm up", 60.seconds, ColorPalette.warmupArgb, BlockRole.Warmup),
-        Block("c1", "Work", 30.seconds, ColorPalette.defaultWorkArgb, BlockRole.Cycle),
-        Block("c2", "Rest", 15.seconds, ColorPalette.defaultRestArgb, BlockRole.Cycle),
-        Block("d1", "Cool down", 90.seconds, ColorPalette.lowIntensityArgb, BlockRole.Cooldown),
+        Block("w1", "Warm up", 60.seconds, defaultRunnerColors.warmupArgb, BlockRole.Warmup),
+        Block("c1", "Work", 30.seconds, defaultRunnerColors.defaultWorkArgb, BlockRole.Cycle),
+        Block("c2", "Rest", 15.seconds, defaultRunnerColors.defaultRestArgb, BlockRole.Cycle),
+        Block("d1", "Cool down", 90.seconds, defaultRunnerColors.lowIntensityArgb, BlockRole.Cooldown),
     ),
 )
 
@@ -867,6 +910,23 @@ private fun TimerDetailContentPreview() {
             onOpenBlock = {}, onAdjust = { _, _ -> }, onRequestDeleteBlock = {},
             onReorder = {}, onAddBlock = {},
             onToggleDontAsk = {}, onConfirmDeleteBlock = {}, onDismissDeleteBlock = {},
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun TimerDetailContentMenuOpenPreview() {
+    PreviewContent {
+        TimerDetailContent(
+            state = TimerDetailState(timer = sampleTimer, nameField = sampleTimer.name, loading = false),
+            isNew = false,
+            onBack = {}, onDuplicate = {}, onDelete = {},
+            onRename = {}, onCycleChange = {}, onStart = {},
+            onOpenBlock = {}, onAdjust = { _, _ -> }, onRequestDeleteBlock = {},
+            onReorder = {}, onAddBlock = {},
+            onToggleDontAsk = {}, onConfirmDeleteBlock = {}, onDismissDeleteBlock = {},
+            initialMenuOpen = true,
         )
     }
 }
@@ -917,9 +977,9 @@ private fun BlockCardSwatchesPreview() {
             modifier = Modifier.fillMaxWidth().padding(Dimension.D500),
             verticalArrangement = Arrangement.spacedBy(Dimension.D400),
         ) {
-            ColorPalette.swatches.take(6).forEachIndexed { i, argb ->
+            defaultRunnerColors.swatches.take(6).forEachIndexed { i, color ->
                 BlockCard(
-                    block = Block("p$i", "Block ${i + 1}", 45.seconds, argb.toInt()),
+                    block = Block("p$i", "Block ${i + 1}", 45.seconds, color.hashCode()),
                     dragging = false,
                     reorderable = true,
                     onTap = {},

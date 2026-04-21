@@ -237,6 +237,7 @@ interface LabelTypography {
 }
 
 interface BodyTypography {
+    val B800: TypographyResource
     val B700: TypographyResource
     val B600: TypographyResource
     val B500: TypographyResource
@@ -571,6 +572,16 @@ class BodyTypographyImpl(
 ) : BodyTypography {
 
     // Body uses comfortable line-height (1.5x) for optimal reading
+    override val B800 = TypographyResource(
+        fontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = Dimension.D800.sp(),
+        lineHeight = Dimension.D800.lineHeight(LineHeightRatio.COMFORTABLE),
+        lineBreak = LineBreak.Paragraph,
+        identifier = "body-800"
+    )
+
+
     override val B700 = TypographyResource(
         fontFamily,
         fontWeight = FontWeight.Normal,
@@ -1019,6 +1030,14 @@ private fun PreviewBodyTypography() {
                     fontSize = 14.sp,
                     color = Color(0xFF666666),
                     modifier = Modifier.padding(bottom = Dimension.D1000)
+                )
+            }
+
+            item {
+                TypographySpecItem(
+                    name = "Body 800",
+                    typographyResource = AppTheme.typography.Body.B800,
+                    exampleText = "The quick brown fox jumps over the lazy dog. This is the largest body text size, ideal for lead paragraphs and introductory content that needs extra emphasis."
                 )
             }
 

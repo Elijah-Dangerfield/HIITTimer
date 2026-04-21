@@ -227,7 +227,9 @@ abstract class SEAViewModel<S : Any, E : Any, A : Any>(
     override fun onCleared() {
         Catching {
             savedStateHandle[STATE_KEY] = state
-        }.logOnFailure("Could not save state on clear for state: ${state::class.simpleName}")
+        }.onFailure {
+            KLog.w(it) { "Could not save state on clear for state: ${state::class.simpleName}" }
+        }
     }
 
     companion object {

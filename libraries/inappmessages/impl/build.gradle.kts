@@ -16,6 +16,8 @@ kotlin {
             implementation(projects.libraries.navigation)
             implementation(projects.libraries.resources)
             implementation(projects.libraries.ui)
+            implementation(projects.libraries.hiittimer)
+            implementation(projects.libraries.flowroutines)
             implementation(projects.features.timers)
 
             implementation(compose.runtime)

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,6 +70,8 @@ interface Colors {
     val surfaceDisabled: ColorResource
     val onSurfaceDisabled: ColorResource
 
+    val runner: RunnerColors
+
 }
 
 interface StatusColor {
@@ -76,12 +80,65 @@ interface StatusColor {
     val bad: ColorResource
 }
 
+interface RunnerColors {
+    val swatches: List<Color>
+    val defaultWork: Color
+    val defaultRest: Color
+    val warmup: Color
+    val lowIntensity: Color
+
+    val defaultWorkArgb: Int
+    val defaultRestArgb: Int
+    val warmupArgb: Int
+    val lowIntensityArgb: Int
+
+    fun onColorFor(color: Color): Color {
+        val luminance = 0.2126f * color.red + 0.7152f * color.green + 0.0722f * color.blue
+        return if (luminance > 0.55f) Color.Black else Color.White
+    }
+
+    fun onColorFor(argb: Int): Color {
+        val r = ((argb shr 16) and 0xFF) / 255f
+        val g = ((argb shr 8) and 0xFF) / 255f
+        val b = (argb and 0xFF) / 255f
+        val luminance = 0.2126f * r + 0.7152f * g + 0.0722f * b
+        return if (luminance > 0.55f) Color.Black else Color.White
+    }
+}
+
+val defaultRunnerColors = object : RunnerColors {
+    override val swatches: List<Color> = listOf(
+        Color(0xFFEC407A), // pink (brand)
+        Color(0xFF66BB6A), // green (brand)
+        Color(0xFF26C6DA), // teal (brand)
+        Color(0xFFFFCA28), // amber
+        Color(0xFFFF9100), // orange
+        Color(0xFFFF5252), // red
+        Color(0xFFAB47BC), // purple
+        Color(0xFF5C6BC0), // indigo
+        Color(0xFF42A5F5), // blue
+        Color(0xFF78909C), // blue grey
+        Color(0xFF8D6E63), // brown
+        Color(0xFF424242), // near-black
+    )
+
+    override val defaultWork: Color = Color(0xFFEC407A)
+    override val defaultRest: Color = Color(0xFF26C6DA)
+    override val warmup: Color = Color(0xFFFFCA28)
+    override val lowIntensity: Color = Color(0xFF66BB6A)
+
+    override val defaultWorkArgb: Int = 0xFFEC407A.toInt()
+    override val defaultRestArgb: Int = 0xFF26C6DA.toInt()
+    override val warmupArgb: Int = 0xFFFFCA28.toInt()
+    override val lowIntensityArgb: Int = 0xFF66BB6A.toInt()
+}
+
 val defaultColors = object : Colors {
-    // Bright accents pop on dark
-    override val accentPrimary = ColorResource.Blue500
+    // Brand accents — Rounds pink + teal on dark
+    override val accentPrimary = ColorResource.Pink400
     override val onAccentPrimary = ColorResource.White
-    override val accentSecondary = ColorResource.Purple500
-    override val onAccentSecondary = ColorResource.White
+    override val accentSecondary = ColorResource.Teal400
+    override val onAccentSecondary = ColorResource.Black
 
     override val shadow = ColorResource.Black_A30
     override val danger = ColorResource.Red500
@@ -98,7 +155,7 @@ val defaultColors = object : Colors {
     override val onSurfaceSecondary = ColorResource.Gray50
     override val surfaceTertiary = ColorResource.Gray600
     override val onSurfaceTertiary = ColorResource.Gray50
-    override val surfaceDisabled = ColorResource.Gray800
+    override val surfaceDisabled = ColorResource.Gray700
     override val onSurfaceDisabled = ColorResource.Gray500
 
     override val border = ColorResource.Gray700
@@ -113,6 +170,8 @@ val defaultColors = object : Colors {
         override val warning = ColorResource.Amber500
         override val bad = ColorResource.Red500
     }
+
+    override val runner: RunnerColors = defaultRunnerColors
 }
 
 @Composable
@@ -541,6 +600,111 @@ fun PreviewColorSwatch(colors: Colors) {
 @Composable
 private fun PreviewDefaultColors() {
     PreviewColorSwatch(defaultColors)
+}
+
+@Composable
+fun RunnerSwatchesPreview(runner: RunnerColors) {
+    val roles = listOf(
+        "Work" to runner.defaultWork,
+        "Rest" to runner.defaultRest,
+        "Warmup" to runner.warmup,
+        "Low intensity" to runner.lowIntensity,
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(defaultColors.background.color)
+            .padding(Dimension.D700),
+        verticalArrangement = Arrangement.spacedBy(Dimension.D600),
+    ) {
+        Text(
+            text = "Block roles",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = defaultColors.textSecondary.color,
+        )
+        roles.forEach { (label, color) ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimension.D500),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(Radii.Card.shape)
+                        .background(color),
+                )
+                Column {
+                    Text(
+                        text = label,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = runner.onColorFor(color),
+                    )
+                    Text(
+                        text = color.hexString(),
+                        fontSize = 11.sp,
+                        color = defaultColors.textSecondary.color,
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = "Swatches",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = defaultColors.textSecondary.color,
+            modifier = Modifier.padding(top = Dimension.D400),
+        )
+        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
+            verticalArrangement = Arrangement.spacedBy(Dimension.D400),
+        ) {
+            runner.swatches.forEachIndexed { index, color ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(Radii.Card.shape)
+                            .background(color),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = (index + 1).toString(),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = runner.onColorFor(color),
+                        )
+                    }
+                    Text(
+                        text = color.hexString(),
+                        fontSize = 10.sp,
+                        color = defaultColors.textSecondary.color,
+                        modifier = Modifier.padding(top = Dimension.D200),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun Color.hexString(): String {
+    val argb = (alpha * 255).toInt().coerceIn(0, 255).shl(24) or
+        (red * 255).toInt().coerceIn(0, 255).shl(16) or
+        (green * 255).toInt().coerceIn(0, 255).shl(8) or
+        (blue * 255).toInt().coerceIn(0, 255)
+    return "#" + argb.toUInt().toString(16).uppercase().padStart(8, '0')
+}
+
+@Preview(widthDp = 420, heightDp = 900)
+@Composable
+private fun PreviewRunnerSwatches() {
+    RunnerSwatchesPreview(defaultRunnerColors)
 }
 
 @Composable

@@ -1,15 +1,21 @@
 package com.dangerfield.hiittimer.features.timers.impl.audio
 
+import com.dangerfield.hiittimer.features.timers.CueRole
 import com.dangerfield.hiittimer.features.timers.SoundMode
 import com.dangerfield.hiittimer.features.timers.SoundPack
 import com.dangerfield.hiittimer.features.timers.impl.runner.RunnerCue
 import com.dangerfield.hiittimer.libraries.core.logging.KLog
 import com.dangerfield.hiittimer.libraries.flowroutines.AppCoroutineScope
-import hiittimer.features.timers.impl.generated.resources.Res
+import rounds.features.timers.impl.generated.resources.Res
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.tatarka.inject.annotations.Inject
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import platform.AVFAudio.AVAudioPlayer
@@ -35,59 +41,65 @@ class IosAudioCuePlayerFactory @Inject constructor(
     override fun create(): AudioCuePlayer = IosAudioCuePlayer(appScope)
 }
 
-@OptIn(ExperimentalForeignApi::class, ExperimentalResourceApi::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalResourceApi::class, ExperimentalCoroutinesApi::class)
 private class IosAudioCuePlayer(
     private val appScope: AppCoroutineScope,
 ) : AudioCuePlayer {
 
     private val logger = KLog.withTag("IosAudioCuePlayer")
     private val synthesizer: AVSpeechSynthesizer by lazy { AVSpeechSynthesizer() }
+    private val sessionDispatcher = Dispatchers.Default.limitedParallelism(1)
 
-    private var mode: SoundMode = SoundMode.Beeps
-    private var pack: SoundPack = SoundPack.Classic
+    private var masterEnabled: Boolean = true
+    private val modes: MutableMap<CueRole, SoundMode> =
+        CueRole.entries.associateWith { SoundMode.Beeps }.toMutableMap()
     private var volume: Float = 0.8f
-
-    private var loadedPack: SoundPack? = null
-    private var shortPlayer: AVAudioPlayer? = null
-    private var longPlayer: AVAudioPlayer? = null
-    private var finishPlayer: AVAudioPlayer? = null
+    private var voiceId: String? = null
+    private val cuePacks: MutableMap<CueRole, SoundPack> =
+        CueRole.entries.associateWith { SoundPack.Classic }.toMutableMap()
+    private val players: MutableMap<Key, AVAudioPlayer> = mutableMapOf()
+    private var unduckJob: Job? = null
 
     init {
-        setupAudioSession()
-        loadPack(pack)
+        appScope.launch(Dispatchers.Main) {
+            activateSession()
+            SoundPack.entries.forEach { pack ->
+                CueSample.entries.forEach { sample ->
+                    loadPlayer(pack, sample)?.let {
+                        it.setVolume(volume)
+                        players[Key(pack, sample)] = it
+                    }
+                }
+            }
+        }
     }
 
-    private fun setupAudioSession() {
-        val session = AVAudioSession.sharedInstance()
-        session.setCategory(
-            AVAudioSessionCategoryPlayback,
-            AVAudioSessionModeDefault,
-            MIX_WITH_OTHERS or DUCK_OTHERS,
-            null,
-        )
-        session.setActive(true, null)
+    override fun setMasterEnabled(enabled: Boolean) {
+        this.masterEnabled = enabled
     }
 
-    override fun setMode(mode: SoundMode) {
-        this.mode = mode
+    override fun setMode(role: CueRole, mode: SoundMode) {
+        modes[role] = mode
     }
 
-    override fun setSoundPack(pack: SoundPack) {
-        if (this.pack == pack && loadedPack == pack) return
-        this.pack = pack
-        loadPack(pack)
+    override fun setCuePack(role: CueRole, pack: SoundPack) {
+        cuePacks[role] = pack
+    }
+
+    override fun setVoice(voiceId: String?) {
+        this.voiceId = voiceId?.takeIf { it.isNotBlank() }
     }
 
     override fun setVolume(volume: Float) {
         val clamped = volume.coerceIn(0f, 1f)
         this.volume = clamped
-        shortPlayer?.setVolume(clamped)
-        longPlayer?.setVolume(clamped)
-        finishPlayer?.setVolume(clamped)
+        players.values.forEach { it.setVolume(clamped) }
     }
 
     override fun play(cue: RunnerCue) {
-        when (mode) {
+        if (!masterEnabled) return
+        val role = cue.route().role
+        when (modes[role] ?: SoundMode.Beeps) {
             SoundMode.Off -> Unit
             SoundMode.Beeps -> playBeep(cue)
             SoundMode.Voice -> playVoice(cue)
@@ -95,13 +107,28 @@ private class IosAudioCuePlayer(
     }
 
     private fun playBeep(cue: RunnerCue) {
-        val player = when (cue) {
-            is RunnerCue.Countdown -> shortPlayer
-            is RunnerCue.Prepare -> if (cue.phase == 1) longPlayer else shortPlayer
-            is RunnerCue.BlockStart -> longPlayer
-            is RunnerCue.Halfway -> shortPlayer
-            RunnerCue.Finish -> finishPlayer
-        } ?: return
+        val routing = cue.route()
+        val pack = cuePacks[routing.role] ?: SoundPack.Classic
+        val player = players[Key(pack, routing.sample)]
+        if (player == null) {
+            appScope.launch(Dispatchers.Main) {
+                val loaded = loadPlayer(pack, routing.sample) ?: return@launch
+                loaded.setVolume(volume)
+                players[Key(pack, routing.sample)] = loaded
+                startBeep(loaded)
+            }
+            return
+        }
+        startBeep(player)
+    }
+
+    private fun startBeep(player: AVAudioPlayer) {
+        val beepMs = (player.duration * 1000.0).toLong().coerceAtLeast(0L)
+        duckFor(beepMs + BEEP_DUCK_TAIL_MS)
+        startPlayer(player)
+    }
+
+    private fun startPlayer(player: AVAudioPlayer) {
         player.pause()
         player.setCurrentTime(0.0)
         player.setVolume(volume)
@@ -135,29 +162,49 @@ private class IosAudioCuePlayer(
         val utterance = AVSpeechUtterance.speechUtteranceWithString(phrase)
         utterance.rate = 0.52f
         utterance.volume = volume
-        utterance.voice = AVSpeechSynthesisVoice.voiceWithLanguage("en-US")
+        utterance.voice = voiceId?.let { AVSpeechSynthesisVoice.voiceWithIdentifier(it) }
+            ?: AVSpeechSynthesisVoice.voiceWithLanguage("en-US")
+        duckFor(VOICE_DUCK_MS)
         synthesizer.speakUtterance(utterance)
     }
 
-    private fun loadPack(pack: SoundPack) {
-        appScope.launch {
-            val prefix = pack.name.lowercase()
-            val short = loadPlayer("files/sounds/${prefix}_short.wav")
-            val long = loadPlayer("files/sounds/${prefix}_long.wav")
-            val finish = loadPlayer("files/sounds/${prefix}_finish.wav")
-            if (short != null) short.setVolume(volume)
-            if (long != null) long.setVolume(volume)
-            if (finish != null) finish.setVolume(volume)
-            shortPlayer = short
-            longPlayer = long
-            finishPlayer = finish
-            loadedPack = pack
+    private suspend fun activateSession() {
+        configureSession(MIX_WITH_OTHERS)
+        withContext(sessionDispatcher) {
+            AVAudioSession.sharedInstance().setActive(true, null)
         }
     }
 
-    private suspend fun loadPlayer(resourcePath: String): AVAudioPlayer? {
-        val bytes = runCatching { Res.readBytes(resourcePath) }
-            .onFailure { logger.e(it) { "failed to read $resourcePath" } }
+    private suspend fun configureSession(options: ULong) {
+        withContext(sessionDispatcher) {
+            AVAudioSession.sharedInstance().setCategory(
+                AVAudioSessionCategoryPlayback,
+                AVAudioSessionModeDefault,
+                options,
+                null,
+            )
+        }
+    }
+
+    private fun duckFor(durationMs: Long) {
+        unduckJob?.cancel()
+        unduckJob = appScope.launch(Dispatchers.Main) {
+            configureSession(MIX_WITH_OTHERS or DUCK_OTHERS)
+            delay(durationMs)
+            configureSession(MIX_WITH_OTHERS)
+        }
+    }
+
+    private suspend fun loadPlayer(pack: SoundPack, sample: CueSample): AVAudioPlayer? {
+        val prefix = pack.name.lowercase()
+        val suffix = when (sample) {
+            CueSample.Short -> "short"
+            CueSample.Long -> "long"
+            CueSample.Finish -> "finish"
+        }
+        val path = "files/sounds/${prefix}_$suffix.wav"
+        val bytes = runCatching { withContext(Dispatchers.Default) { Res.readBytes(path) } }
+            .onFailure { logger.e(it) { "failed to read $path" } }
             .getOrNull() ?: return null
         val data = bytes.toNSData() ?: return null
         val player = AVAudioPlayer(data = data, error = null)
@@ -167,17 +214,20 @@ private class IosAudioCuePlayer(
 
     override fun release() {
         synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
-        shortPlayer?.stop()
-        longPlayer?.stop()
-        finishPlayer?.stop()
-        shortPlayer = null
-        longPlayer = null
-        finishPlayer = null
+        unduckJob?.cancel()
+        unduckJob = null
+        players.values.forEach { it.stop() }
+        players.clear()
+        appScope.launch(Dispatchers.Main) { configureSession(MIX_WITH_OTHERS) }
     }
+
+    private data class Key(val pack: SoundPack, val sample: CueSample)
 
     companion object {
         private const val MIX_WITH_OTHERS: ULong = 1u
         private const val DUCK_OTHERS: ULong = 2u
+        private const val BEEP_DUCK_TAIL_MS: Long = 1300
+        private const val VOICE_DUCK_MS: Long = 3500
     }
 }
 

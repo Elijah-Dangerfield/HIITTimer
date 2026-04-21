@@ -1,7 +1,7 @@
 package com.dangerfield.hiittimer
 
+import androidx.lifecycle.ViewModel
 import com.dangerfield.hiittimer.features.timers.TimerListRoute
-import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
 import com.dangerfield.hiittimer.libraries.hiittimer.AppCache
 import com.dangerfield.hiittimer.libraries.navigation.Route
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,53 +12,31 @@ import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 
 /**
- * App-level ViewModel that decides the initial route and tracks whether the
- * iOS typewriter splash has already played this process.
+ * App-level ViewModel. Holds the start destination and an `isReady` signal for
+ * Android's splash-screen API.
  *
- * Scoped as singleton so Android's splash-screen API and the Compose overlay
- * share the same instance.
+ * Scoped as singleton so Android's splash-screen API can read the same instance
+ * used by the App composable.
+ *
+ * The iOS splash-overlay state lives inside the [App] composable itself, not
+ * here — keeping it out of the reactive app state means flipping it cannot
+ * trigger a root recomposition (which previously caused the NavHost to re-emit
+ * its start destination).
  */
 @SingleIn(AppScope::class)
 @Inject
 class AppViewModel(
     private val appCache: AppCache,
-) : SEAViewModel<AppState, AppEvent, AppAction>(AppState(startDestination = TimerListRoute())) {
+) : ViewModel() {
 
-    private val _isReady = MutableStateFlow(false)
+    val startDestination: Route = TimerListRoute
+
+    private val _isReady = MutableStateFlow(true)
 
     /**
      * Exposed to Android's splash screen API for keepOnScreenCondition.
-     * True once we've determined where to navigate.
+     * True once we've determined where to navigate. We compute this synchronously
+     * so there is no "pending" state.
      */
     val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
-
-    init {
-        takeAction(AppAction.DetermineStartDestination)
-    }
-
-    override suspend fun handleAction(action: AppAction) {
-        when (action) {
-            AppAction.DetermineStartDestination -> {
-                val destination: Route = TimerListRoute()
-
-                action.updateState { it.copy(startDestination = destination) }
-                _isReady.value = true
-            }
-            AppAction.MarkSplashShown -> {
-                action.updateState { it.copy(hasShownSplash = true) }
-            }
-        }
-    }
-}
-
-data class AppState(
-    val startDestination: Route,
-    val hasShownSplash: Boolean = false,
-)
-
-sealed class AppEvent
-
-sealed class AppAction {
-    data object DetermineStartDestination : AppAction()
-    data object MarkSplashShown : AppAction()
 }

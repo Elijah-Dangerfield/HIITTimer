@@ -5,20 +5,20 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import org.jetbrains.compose.resources.Font
-import hiittimer.libraries.ui.generated.resources.DMSerifText_Italic
-import hiittimer.libraries.ui.generated.resources.DMSerifText_Regular
-import hiittimer.libraries.ui.generated.resources.Res
-import hiittimer.libraries.ui.generated.resources.Roboto_Bold
-import hiittimer.libraries.ui.generated.resources.Roboto_Light
-import hiittimer.libraries.ui.generated.resources.Roboto_Medium
-import hiittimer.libraries.ui.generated.resources.Roboto_Regular
-import hiittimer.libraries.ui.generated.resources.Roboto_SemiBold
-import hiittimer.libraries.ui.generated.resources.lust_script_regular
-import hiittimer.libraries.ui.generated.resources.poppins_bold
-import hiittimer.libraries.ui.generated.resources.poppins_light
-import hiittimer.libraries.ui.generated.resources.poppins_medium
-import hiittimer.libraries.ui.generated.resources.poppins_regular
-import hiittimer.libraries.ui.generated.resources.poppins_semibold
+import rounds.libraries.ui.generated.resources.DMSerifText_Italic
+import rounds.libraries.ui.generated.resources.DMSerifText_Regular
+import rounds.libraries.ui.generated.resources.Res
+import rounds.libraries.ui.generated.resources.Roboto_Bold
+import rounds.libraries.ui.generated.resources.Roboto_Light
+import rounds.libraries.ui.generated.resources.Roboto_Medium
+import rounds.libraries.ui.generated.resources.Roboto_Regular
+import rounds.libraries.ui.generated.resources.Roboto_SemiBold
+import rounds.libraries.ui.generated.resources.lust_script_regular
+import rounds.libraries.ui.generated.resources.poppins_bold
+import rounds.libraries.ui.generated.resources.poppins_light
+import rounds.libraries.ui.generated.resources.poppins_medium
+import rounds.libraries.ui.generated.resources.poppins_regular
+import rounds.libraries.ui.generated.resources.poppins_semibold
 
 
 val BrandFontFamily: FontFamily

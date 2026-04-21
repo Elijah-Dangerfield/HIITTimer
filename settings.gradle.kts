@@ -16,7 +16,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = "HIITTimer"
+rootProject.name = "Rounds"
 
 dependencyResolutionManagement {
     repositories {

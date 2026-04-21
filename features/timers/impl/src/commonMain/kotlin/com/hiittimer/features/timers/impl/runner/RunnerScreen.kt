@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,17 +18,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -40,16 +45,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dangerfield.hiittimer.features.timers.Block
 import com.dangerfield.hiittimer.features.timers.BlockRole
-import com.dangerfield.hiittimer.features.timers.SoundMode
 import com.dangerfield.hiittimer.features.timers.Timer
-import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
 import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
+import com.dangerfield.hiittimer.system.color.defaultRunnerColors
 import androidx.compose.ui.tooling.preview.Preview
 import kotlin.time.Duration.Companion.seconds
 import com.dangerfield.hiittimer.libraries.ui.Elevation
@@ -58,9 +63,9 @@ import com.dangerfield.hiittimer.libraries.ui.components.Screen
 import com.dangerfield.hiittimer.libraries.ui.components.Surface
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonDanger
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonGhost
-import com.dangerfield.hiittimer.libraries.ui.components.dialog.Dialog
-import com.dangerfield.hiittimer.libraries.ui.components.dialog.rememberDialogState
+import com.dangerfield.hiittimer.libraries.ui.components.dialog.BasicDialog
 import com.dangerfield.hiittimer.libraries.ui.components.icon.CircleIcon
+import com.dangerfield.hiittimer.libraries.ui.components.icon.Icon
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconSize
 import com.dangerfield.hiittimer.libraries.ui.components.icon.Icons
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
@@ -71,6 +76,50 @@ import com.dangerfield.hiittimer.system.Radii
 import kotlin.time.Duration
 import androidx.compose.ui.backhandler.BackHandler
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.action_keep_going
+import rounds.libraries.resources.generated.resources.action_stop
+import rounds.libraries.resources.generated.resources.cd_exit_runner
+import rounds.libraries.resources.generated.resources.cd_muted
+import rounds.libraries.resources.generated.resources.cd_pause
+import rounds.libraries.resources.generated.resources.cd_reset_this_block
+import rounds.libraries.resources.generated.resources.cd_resume
+import rounds.libraries.resources.generated.resources.cd_skip_block
+import rounds.libraries.resources.generated.resources.cd_sound_off
+import rounds.libraries.resources.generated.resources.cd_sound_on
+import rounds.libraries.resources.generated.resources.cd_volume_high
+import rounds.libraries.resources.generated.resources.cd_volume_low
+import rounds.libraries.resources.generated.resources.common_done
+import rounds.libraries.resources.generated.resources.common_untitled
+import rounds.libraries.resources.generated.resources.runner_elapsed_suffix
+import rounds.libraries.resources.generated.resources.runner_finished_subtitle
+import rounds.libraries.resources.generated.resources.runner_finished_title
+import rounds.libraries.resources.generated.resources.runner_left_suffix
+import rounds.libraries.resources.generated.resources.runner_paused
+import rounds.libraries.resources.generated.resources.runner_percent
+import rounds.libraries.resources.generated.resources.runner_preroll_get_ready
+import rounds.libraries.resources.generated.resources.runner_preroll_get_set
+import rounds.libraries.resources.generated.resources.runner_preroll_go
+import rounds.libraries.resources.generated.resources.runner_recap_blocks
+import rounds.libraries.resources.generated.resources.runner_recap_rounds
+import rounds.libraries.resources.generated.resources.runner_recap_time
+import rounds.libraries.resources.generated.resources.runner_sound_off
+import rounds.libraries.resources.generated.resources.runner_sound_on
+import rounds.libraries.resources.generated.resources.runner_stop_body
+import rounds.libraries.resources.generated.resources.runner_stop_title
+import rounds.libraries.resources.generated.resources.runner_summary_block
+import rounds.libraries.resources.generated.resources.runner_summary_cooldown
+import rounds.libraries.resources.generated.resources.runner_summary_fraction
+import rounds.libraries.resources.generated.resources.runner_summary_round
+import rounds.libraries.resources.generated.resources.runner_summary_warmup
+import rounds.libraries.resources.generated.resources.runner_support_body
+import rounds.libraries.resources.generated.resources.runner_support_cta
+import rounds.libraries.resources.generated.resources.runner_support_title
+import rounds.libraries.resources.generated.resources.runner_up_first
+import rounds.libraries.resources.generated.resources.runner_up_next
+import rounds.libraries.resources.generated.resources.runner_volume_tooltip
+import rounds.libraries.resources.generated.resources.timer_detail_rounds_count
 
 @Composable
 fun RunnerScreen(
@@ -94,6 +143,8 @@ fun RunnerScreen(
         onResetBlock = { viewModel.takeAction(RunnerAction.ResetBlock) },
         onStop = { viewModel.takeAction(RunnerAction.Stop) },
         onSupportClick = onSupportClick,
+        onVolumeChange = { viewModel.takeAction(RunnerAction.SetCueVolume(it)) },
+        onDismissVolumeTooltip = { viewModel.takeAction(RunnerAction.DismissVolumeTooltip) },
     )
 }
 
@@ -108,6 +159,8 @@ private fun RunnerContent(
     onResetBlock: () -> Unit,
     onStop: () -> Unit,
     onSupportClick: () -> Unit,
+    onVolumeChange: (Float) -> Unit,
+    onDismissVolumeTooltip: () -> Unit,
 ) {
     val engine = state.engineState
     val backgroundArgb = when (engine) {
@@ -118,7 +171,7 @@ private fun RunnerContent(
         else -> 0xFF000000.toInt()
     }
     val bg = Color(backgroundArgb)
-    val onBgColor = ColorPalette.onColorFor(backgroundArgb)
+    val onBgColor = defaultRunnerColors.onColorFor(backgroundArgb)
     val onBg: ColorResource = ColorResource.FromColor(onBgColor, "on-block")
 
     var showExitConfirm by remember { mutableStateOf(false) }
@@ -141,6 +194,17 @@ private fun RunnerContent(
         )
     }
 
+    val volumeAdjustable = engine is RunnerState.PreRoll ||
+        engine is RunnerState.Running ||
+        engine is RunnerState.Paused
+    var isDraggingVolume by remember { mutableStateOf(false) }
+    var dragVolume by remember { mutableFloatStateOf(state.cueVolume) }
+
+    val currentVolume by rememberUpdatedState(state.cueVolume)
+    val latestShowTooltip by rememberUpdatedState(state.showVolumeTooltip)
+    val latestOnVolumeChange by rememberUpdatedState(onVolumeChange)
+    val latestOnDismissTooltip by rememberUpdatedState(onDismissVolumeTooltip)
+
     Screen(
         modifier = Modifier.fillMaxSize(),
         containerColor = bg,
@@ -149,7 +213,25 @@ private fun RunnerContent(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundGradient)
-                .padding(padding),
+                .padding(padding)
+                .pointerInput(volumeAdjustable) {
+                    if (!volumeAdjustable) return@pointerInput
+                    detectVerticalDragGestures(
+                        onDragStart = {
+                            isDraggingVolume = true
+                            dragVolume = currentVolume
+                            if (latestShowTooltip) latestOnDismissTooltip()
+                        },
+                        onDragEnd = { isDraggingVolume = false },
+                        onDragCancel = { isDraggingVolume = false },
+                    ) { change, dy ->
+                        change.consume()
+                        val height = size.height.toFloat().coerceAtLeast(1f)
+                        val delta = -dy / height
+                        dragVolume = (dragVolume + delta).coerceIn(0f, 1f)
+                        latestOnVolumeChange(dragVolume)
+                    }
+                },
         ) {
             val isLandscape = maxWidth > maxHeight
             if (isLandscape) {
@@ -181,6 +263,25 @@ private fun RunnerContent(
                     onSupportClick = onSupportClick,
                 )
             }
+
+            VolumeDragIndicator(
+                visible = isDraggingVolume,
+                volume = state.cueVolume,
+                onBg = onBg,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = Dimension.D400),
+            )
+
+            VolumeHintTooltip(
+                visible = state.showVolumeTooltip && !isDraggingVolume && volumeAdjustable,
+                onBg = onBg,
+                bg = bg,
+                onDismiss = onDismissVolumeTooltip,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = Dimension.D700),
+            )
         }
     }
 
@@ -245,7 +346,7 @@ private fun RunnerPortraitLayout(
             paused = engine is RunnerState.Paused,
             finished = engine is RunnerState.Finished,
             disabled = engine is RunnerState.PreRoll,
-            soundMode = state.soundMode,
+            soundsEnabled = state.soundsEnabled,
             onToggleSound = onToggleSound,
             onPauseResume = { if (engine is RunnerState.Paused) onResume() else onPause() },
             onSkip = onSkip,
@@ -354,7 +455,7 @@ private fun RunnerLandscapeLayout(
                     )
                     Spacer(modifier = Modifier.height(Dimension.D300))
                     Text(
-                        text = "Up first: ${engine.firstBlock.name}",
+                        text = stringResource(AppRes.string.runner_up_first, engine.firstBlock.name),
                         typography = AppTheme.typography.Label.L400,
                         color = onBg.withAlpha(0.7f),
                         modifier = Modifier.fillMaxWidth(),
@@ -372,7 +473,7 @@ private fun RunnerLandscapeLayout(
                     engine.nextBlock?.let { next ->
                         Spacer(modifier = Modifier.height(Dimension.D200))
                         Text(
-                            text = "Up next: ${next.name}",
+                            text = stringResource(AppRes.string.runner_up_next, next.name),
                             typography = AppTheme.typography.Label.L400,
                             color = onBg.withAlpha(0.7f),
                         )
@@ -382,7 +483,7 @@ private fun RunnerLandscapeLayout(
                     SummaryCards(engine = engine.snapshot, onBg = onBg)
                     Spacer(modifier = Modifier.height(Dimension.D500))
                     Text(
-                        text = "Paused",
+                        text = stringResource(AppRes.string.runner_paused),
                         typography = AppTheme.typography.Display.D1500,
                         color = onBg,
                     )
@@ -396,7 +497,7 @@ private fun RunnerLandscapeLayout(
                 paused = engine is RunnerState.Paused,
                 finished = false,
                 disabled = engine is RunnerState.PreRoll,
-                soundMode = state.soundMode,
+                soundsEnabled = state.soundsEnabled,
                 onToggleSound = onToggleSound,
                 onPauseResume = { if (engine is RunnerState.Paused) onResume() else onPause() },
                 onSkip = onSkip,
@@ -429,7 +530,7 @@ private fun PreRollBody(engine: RunnerState.PreRoll, onBg: ColorResource) {
     )
     Spacer(modifier = Modifier.height(Dimension.D300))
     Text(
-        text = "Up first: ${engine.firstBlock.name}",
+        text = stringResource(AppRes.string.runner_up_first, engine.firstBlock.name),
         typography = AppTheme.typography.Label.L400,
         color = onBg.withAlpha(0.7f),
     )
@@ -480,49 +581,45 @@ private fun PreRollRing(engine: RunnerState.PreRoll, onBg: ColorResource) {
     }
 }
 
+@Composable
 private fun preRollPhrase(phase: Int): String = when (phase) {
-    3 -> "Get ready"
-    2 -> "Get set"
-    1 -> "Go!"
+    3 -> stringResource(AppRes.string.runner_preroll_get_ready)
+    2 -> stringResource(AppRes.string.runner_preroll_get_set)
+    1 -> stringResource(AppRes.string.runner_preroll_go)
     else -> ""
 }
 
 @Composable
 private fun ExitConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    val dialogState = rememberDialogState()
-    Dialog(state = dialogState, onDismissRequest = onDismiss) {
-        Surface(
-            color = AppTheme.colors.surfacePrimary,
-            contentColor = AppTheme.colors.onSurfacePrimary,
-            radius = Radii.Card,
-            contentPadding = PaddingValues(Dimension.D700),
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Stop workout?",
-                    typography = AppTheme.typography.Heading.H700,
-                )
-                Spacer(modifier = Modifier.height(Dimension.D400))
-                Text(
-                    text = "You'll lose your progress for this run.",
-                    typography = AppTheme.typography.Body.B500,
-                    color = AppTheme.colors.textSecondary,
-                )
-                Spacer(modifier = Modifier.height(Dimension.D700))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
-                ) {
-                    ButtonGhost(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                        Text("Keep going")
-                    }
-                    ButtonDanger(onClick = onConfirm, modifier = Modifier.weight(1f)) {
-                        Text("Stop")
-                    }
+    BasicDialog(
+        onDismissRequest = onDismiss,
+        topContent = {
+            Text(
+                text = stringResource(AppRes.string.runner_stop_title),
+                typography = AppTheme.typography.Heading.H700,
+            )
+        },
+        content = {
+            Text(
+                text = stringResource(AppRes.string.runner_stop_body),
+                typography = AppTheme.typography.Body.B500,
+                color = AppTheme.colors.textSecondary,
+            )
+        },
+        bottomContent = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
+            ) {
+                ButtonGhost(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(AppRes.string.action_keep_going))
+                }
+                ButtonDanger(onClick = onConfirm, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(AppRes.string.action_stop))
                 }
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -539,7 +636,7 @@ private fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CircleIcon(
-            icon = Icons.Close("Exit runner"),
+            icon = Icons.Close(stringResource(AppRes.string.cd_exit_runner)),
             iconSize = IconSize.Medium,
             padding = Dimension.D300,
             backgroundColor = onBg.withAlpha(0.12f),
@@ -554,7 +651,7 @@ private fun TopBar(
         )
         if (onResetBlock != null) {
             CircleIcon(
-                icon = Icons.Replay("Reset this block"),
+                icon = Icons.Replay(stringResource(AppRes.string.cd_reset_this_block)),
                 iconSize = IconSize.Medium,
                 padding = Dimension.D300,
                 backgroundColor = onBg.withAlpha(if (resetEnabled) 0.12f else 0.04f),
@@ -582,7 +679,7 @@ private fun RunningBody(engine: RunnerState.Running, onBg: ColorResource, paused
     Spacer(modifier = Modifier.height(Dimension.D900))
 
     Text(
-        text = if (paused) "Paused" else engine.currentBlock.name,
+        text = if (paused) stringResource(AppRes.string.runner_paused) else engine.currentBlock.name,
         typography = AppTheme.typography.Display.D1200,
         color = onBg,
         textAlign = TextAlign.Center,
@@ -592,8 +689,8 @@ private fun RunningBody(engine: RunnerState.Running, onBg: ColorResource, paused
         engine.nextBlock?.let { next ->
             Spacer(modifier = Modifier.height(Dimension.D300))
             Text(
-                text = "Up next: ${next.name}",
-                typography = AppTheme.typography.Label.L400,
+                text = stringResource(AppRes.string.runner_up_next, next.name),
+                typography = AppTheme.typography.Label.L700.Bold,
                 color = onBg.withAlpha(0.7f),
             )
         }
@@ -609,14 +706,15 @@ private fun FinishedBody(
 ) {
     Spacer(modifier = Modifier.height(Dimension.D1300))
     Text(
-        text = "Crushed it.",
+        text = stringResource(AppRes.string.runner_finished_title),
         typography = AppTheme.typography.Display.D1500,
         color = onBg,
         textAlign = TextAlign.Center,
     )
     Spacer(modifier = Modifier.height(Dimension.D300))
+    val timerName = engine.timer.name.ifBlank { stringResource(AppRes.string.common_untitled) }
     Text(
-        text = "Nice work on \"${engine.timer.name.ifBlank { "Untitled" }}\".",
+        text = stringResource(AppRes.string.runner_finished_subtitle, timerName),
         typography = AppTheme.typography.Body.B500,
         color = onBg.withAlpha(0.8f),
         textAlign = TextAlign.Center,
@@ -629,19 +727,19 @@ private fun FinishedBody(
         horizontalArrangement = Arrangement.spacedBy(Dimension.D500),
     ) {
         RecapStat(
-            label = "Time",
+            label = stringResource(AppRes.string.runner_recap_time),
             value = formatClockLong(engine.elapsed.inWholeSeconds.toInt()),
             onBg = onBg,
             modifier = Modifier.weight(1f),
         )
         RecapStat(
-            label = "Rounds",
-            value = "${engine.completedRounds}x",
+            label = stringResource(AppRes.string.runner_recap_rounds),
+            value = stringResource(AppRes.string.timer_detail_rounds_count, engine.completedRounds),
             onBg = onBg,
             modifier = Modifier.weight(1f),
         )
         RecapStat(
-            label = "Blocks",
+            label = stringResource(AppRes.string.runner_recap_blocks),
             value = engine.completedBlockCount.toString(),
             onBg = onBg,
             modifier = Modifier.weight(1f),
@@ -685,7 +783,7 @@ private fun FinishedBody(
             .padding(horizontal = Dimension.D1100, vertical = Dimension.D500),
     ) {
         Text(
-            text = "Done",
+            text = stringResource(AppRes.string.common_done),
             typography = AppTheme.typography.Label.L600,
             color = ColorResource.FromColor(
                 Color.Black.takeIf { onBg.color == Color.White }
@@ -708,19 +806,19 @@ private fun SupportCard(onBg: ColorResource, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "Enjoying HIIT Timer?",
+                text = stringResource(AppRes.string.runner_support_title),
                 typography = AppTheme.typography.Label.L500,
                 color = onBg,
             )
             Spacer(modifier = Modifier.height(Dimension.D300))
             Text(
-                text = "I absolutely refuse to throw in ads or make people pay. If you like the app, please consider buying me a coffee.",
+                text = stringResource(AppRes.string.runner_support_body),
                 typography = AppTheme.typography.Body.B400,
                 color = onBg.withAlpha(0.7f),
             )
             Spacer(modifier = Modifier.height(Dimension.D400))
             Text(
-                text = "Support →",
+                text = stringResource(AppRes.string.runner_support_cta),
                 typography = AppTheme.typography.Label.L400,
                 color = onBg,
             )
@@ -785,8 +883,8 @@ private fun SummaryCards(engine: RunnerState.Running, onBg: ColorResource) {
             BlockRole.Warmup -> {
                 val position = engine.blockIndex  // 0-based within warmup
                 SummaryPill(
-                    label = "Warm up",
-                    value = if (warmupCount > 1) "${position + 1}/$warmupCount" else "",
+                    label = stringResource(AppRes.string.runner_summary_warmup),
+                    value = if (warmupCount > 1) stringResource(AppRes.string.runner_summary_fraction, position + 1, warmupCount) else "",
                     onBg = onBg,
                     modifier = Modifier.weight(1f),
                 )
@@ -794,14 +892,14 @@ private fun SummaryCards(engine: RunnerState.Running, onBg: ColorResource) {
             BlockRole.Cycle -> {
                 val cycleBlockIdx = (engine.blockIndex - warmupCount) % cycleBlockCount.coerceAtLeast(1)
                 SummaryPill(
-                    label = "Block",
-                    value = "${cycleBlockIdx + 1}/$cycleBlockCount",
+                    label = stringResource(AppRes.string.runner_summary_block),
+                    value = stringResource(AppRes.string.runner_summary_fraction, cycleBlockIdx + 1, cycleBlockCount),
                     onBg = onBg,
                     modifier = Modifier.weight(1f),
                 )
                 SummaryPill(
-                    label = "Round",
-                    value = "${engine.cycleRoundIndex + 1}/${timer.cycleCount}",
+                    label = stringResource(AppRes.string.runner_summary_round),
+                    value = stringResource(AppRes.string.runner_summary_fraction, engine.cycleRoundIndex + 1, timer.cycleCount),
                     onBg = onBg,
                     modifier = Modifier.weight(1f),
                 )
@@ -810,8 +908,8 @@ private fun SummaryCards(engine: RunnerState.Running, onBg: ColorResource) {
                 val cooldownStart = warmupCount + cycleBlockCount * timer.cycleCount
                 val position = engine.blockIndex - cooldownStart
                 SummaryPill(
-                    label = "Cool down",
-                    value = if (cooldownCount > 1) "${position + 1}/$cooldownCount" else "",
+                    label = stringResource(AppRes.string.runner_summary_cooldown),
+                    value = if (cooldownCount > 1) stringResource(AppRes.string.runner_summary_fraction, position + 1, cooldownCount) else "",
                     onBg = onBg,
                     modifier = Modifier.weight(1f),
                 )
@@ -906,7 +1004,7 @@ private fun BottomControls(
     paused: Boolean,
     finished: Boolean,
     disabled: Boolean,
-    soundMode: SoundMode,
+    soundsEnabled: Boolean,
     onToggleSound: () -> Unit,
     onPauseResume: () -> Unit,
     onSkip: () -> Unit,
@@ -923,7 +1021,7 @@ private fun BottomControls(
     var showLabel by remember { mutableStateOf(false) }
     var labelKey by remember { mutableStateOf(0) }
 
-    LaunchedEffect(soundMode) {
+    LaunchedEffect(soundsEnabled) {
         showLabel = true
         labelKey++
     }
@@ -943,10 +1041,10 @@ private fun BottomControls(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val soundIcon = when (soundMode) {
-                SoundMode.Off -> Icons.VolumeOff("Sound off")
-                SoundMode.Beeps -> Icons.VolumeUp("Sound on - Beeps")
-                SoundMode.Voice -> Icons.RecordVoice("Sound on - Voice")
+            val soundIcon = if (soundsEnabled) {
+                Icons.VolumeUp(stringResource(AppRes.string.cd_sound_on))
+            } else {
+                Icons.VolumeOff(stringResource(AppRes.string.cd_sound_off))
             }
             CircleIcon(
                 icon = soundIcon,
@@ -957,7 +1055,7 @@ private fun BottomControls(
                 onClick = onToggleSound,
             )
             CircleIcon(
-                icon = if (paused) Icons.Play("Resume") else Icons.Pause("Pause"),
+                icon = if (paused) Icons.Play(stringResource(AppRes.string.cd_resume)) else Icons.Pause(stringResource(AppRes.string.cd_pause)),
                 iconSize = IconSize.Largest,
                 padding = Dimension.D800,
                 backgroundColor = if (pauseOrSkipEnabled) onBg else onBg.withAlpha(0.4f),
@@ -965,7 +1063,7 @@ private fun BottomControls(
                 onClick = if (pauseOrSkipEnabled) onPauseResume else ({}),
             )
             CircleIcon(
-                icon = Icons.SkipNext("Skip block"),
+                icon = Icons.SkipNext(stringResource(AppRes.string.cd_skip_block)),
                 iconSize = IconSize.Medium,
                 padding = Dimension.D500,
                 backgroundColor = onBg.withAlpha(if (pauseOrSkipEnabled) 0.14f else 0.06f),
@@ -976,11 +1074,7 @@ private fun BottomControls(
 
         Spacer(modifier = Modifier.height(Dimension.D300))
 
-        val labelText = when (soundMode) {
-            SoundMode.Off -> "Sound off"
-            SoundMode.Beeps -> "Beeps"
-            SoundMode.Voice -> "Voice"
-        }
+        val labelText = if (soundsEnabled) stringResource(AppRes.string.runner_sound_on) else stringResource(AppRes.string.runner_sound_off)
 
         Column(modifier = Modifier.height(Dimension.D500)) {
             AnimatedVisibility(
@@ -1013,12 +1107,12 @@ private fun TotalProgress(elapsed: Duration, total: Duration, onBg: ColorResourc
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = formatSeconds(elapsedSeconds) + " elapsed",
+                text = stringResource(AppRes.string.runner_elapsed_suffix, formatSeconds(elapsedSeconds)),
                 typography = AppTheme.typography.Label.L400,
                 color = onBg.withAlpha(0.7f),
             )
             Text(
-                text = formatSeconds(remainingSeconds) + " left",
+                text = stringResource(AppRes.string.runner_left_suffix, formatSeconds(remainingSeconds)),
                 typography = AppTheme.typography.Label.L400,
                 color = onBg.withAlpha(0.7f),
             )
@@ -1033,14 +1127,108 @@ private fun TotalProgress(elapsed: Duration, total: Duration, onBg: ColorResourc
     }
 }
 
+@Composable
+private fun VolumeDragIndicator(
+    visible: Boolean,
+    volume: Float,
+    onBg: ColorResource,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier,
+    ) {
+        val fraction by animateFloatAsState(
+            targetValue = volume.coerceIn(0f, 1f),
+            label = "volume-level",
+        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxHeight(0.5f),
+        ) {
+            Icon(
+                icon = when {
+                    fraction <= 0.01f -> Icons.VolumeOff(stringResource(AppRes.string.cd_muted))
+                    fraction < 0.5f -> Icons.VolumeDown(stringResource(AppRes.string.cd_volume_low))
+                    else -> Icons.VolumeUp(stringResource(AppRes.string.cd_volume_high))
+                },
+                size = IconSize.Small,
+                color = onBg.withAlpha(0.9f),
+            )
+            Spacer(modifier = Modifier.height(Dimension.D200))
+            Text(
+                text = stringResource(AppRes.string.runner_percent, (fraction * 100).toInt()),
+                typography = AppTheme.typography.Label.L400,
+                color = onBg.withAlpha(0.8f),
+            )
+            Spacer(modifier = Modifier.height(Dimension.D300))
+            Box(
+                modifier = Modifier
+                    .width(8.dp)
+                    .weight(1f)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(onBg.color.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(fraction)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(onBg.color),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VolumeHintTooltip(
+    visible: Boolean,
+    onBg: ColorResource,
+    bg: Color,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier,
+    ) {
+        val tooltipFg = ColorResource.FromColor(bg, "tooltip-fg")
+        Surface(
+            color = onBg,
+            contentColor = tooltipFg,
+            radius = Radii.Card,
+            elevation = Elevation.Button,
+            contentPadding = PaddingValues(
+                horizontal = Dimension.D600,
+                vertical = Dimension.D500,
+            ),
+            modifier = Modifier.clickable { onDismiss() },
+        ) {
+            Text(
+                text = stringResource(AppRes.string.runner_volume_tooltip),
+                typography = AppTheme.typography.Label.L400,
+                color = tooltipFg,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
 private fun formatSeconds(seconds: Int): String {
     val mins = seconds / 60
     val secs = seconds % 60
     return "${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}"
 }
 
-private val sampleWork = Block("w", "Work", 30.seconds, ColorPalette.defaultWorkArgb, BlockRole.Cycle)
-private val sampleRest = Block("r", "Rest", 15.seconds, ColorPalette.defaultRestArgb, BlockRole.Cycle)
+private val sampleWork = Block("w", "Work", 30.seconds, defaultRunnerColors.defaultWorkArgb, BlockRole.Cycle)
+private val sampleRest = Block("r", "Rest", 15.seconds, defaultRunnerColors.defaultRestArgb, BlockRole.Cycle)
 private val sampleRunnerTimer = Timer(
     id = "t",
     name = "Tabata",
@@ -1064,7 +1252,7 @@ private fun RunnerContentRunningPreview() {
     PreviewContent(backgroundColor = null) {
         RunnerContent(
             state = RunnerUiState(timer = sampleRunnerTimer, engineState = sampleRunning),
-            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {},
+            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {}, onVolumeChange = {}, onDismissVolumeTooltip = {},
         )
     }
 }
@@ -1078,7 +1266,7 @@ private fun RunnerContentPausedPreview() {
                 timer = sampleRunnerTimer,
                 engineState = RunnerState.Paused(sampleRunning),
             ),
-            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {},
+            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {}, onVolumeChange = {}, onDismissVolumeTooltip = {},
         )
     }
 }
@@ -1097,7 +1285,7 @@ private fun RunnerContentPreRollPreview() {
                     phase = 2,
                 ),
             ),
-            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {},
+            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {}, onVolumeChange = {}, onDismissVolumeTooltip = {},
         )
     }
 }
@@ -1124,6 +1312,8 @@ private fun RunnerContentFinishedPreview() {
             onResetBlock = {},
             onStop = {},
             onSupportClick = {},
+            onVolumeChange = {},
+            onDismissVolumeTooltip = {},
         )
     }
 }
@@ -1135,7 +1325,7 @@ private fun RunnerContentRunningPreviewLandscape() {
     PreviewContent(backgroundColor = null) {
         RunnerContent(
             state = RunnerUiState(timer = sampleRunnerTimer, engineState = sampleRunning),
-            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {},
+            onExit = {}, onToggleSound = {}, onPause = {}, onResume = {}, onSkip = {}, onResetBlock = {}, onStop = {}, onSupportClick = {}, onVolumeChange = {}, onDismissVolumeTooltip = {},
         )
     }
 }

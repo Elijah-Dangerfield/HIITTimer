@@ -17,6 +17,7 @@ kotlin {
             implementation(projects.libraries.flowroutines)
             implementation(projects.libraries.ui)
             implementation(projects.libraries.hiittimer)
+            implementation(projects.libraries.resources)
 
             // Compose dependencies (navigation and lifecycle provided by hiittimer.feature plugin)
             implementation(compose.runtime)

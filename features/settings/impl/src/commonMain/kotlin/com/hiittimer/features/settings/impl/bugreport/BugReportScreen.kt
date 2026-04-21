@@ -31,6 +31,18 @@ import com.dangerfield.hiittimer.libraries.ui.components.text.OutlinedTextField
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.libraries.ui.screenContentPadding
 import androidx.compose.ui.tooling.preview.Preview
+import org.jetbrains.compose.resources.stringResource
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.bug_report_captured_details
+import rounds.libraries.resources.generated.resources.bug_report_error_code
+import rounds.libraries.resources.generated.resources.bug_report_report_id
+import rounds.libraries.resources.generated.resources.bug_report_subtitle
+import rounds.libraries.resources.generated.resources.bug_report_title
+import rounds.libraries.resources.generated.resources.char_counter
+import rounds.libraries.resources.generated.resources.common_describe_placeholder
+import rounds.libraries.resources.generated.resources.common_message_label
+import rounds.libraries.resources.generated.resources.common_send
+import rounds.libraries.resources.generated.resources.common_sending
 
 private const val BUG_REPORT_CHAR_LIMIT = 180
 
@@ -47,7 +59,7 @@ fun BugReportScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopBar(
-                title = "Report a Bug",
+                title = stringResource(AppRes.string.bug_report_title),
                 onNavigateBack = { onAction(BugReportAction.Back) }
             )
         }
@@ -65,7 +77,7 @@ fun BugReportScreen(
             VerticalSpacerD1000()
 
             if (state.hasContext) {
-                SectionCard(title = "Captured details") {
+                SectionCard(title = stringResource(AppRes.string.bug_report_captured_details)) {
                     state.contextMessage?.let {
                         Text(
                             text = it,
@@ -76,14 +88,14 @@ fun BugReportScreen(
 
                     state.errorCode?.let {
                         SummaryRow(
-                            label = "Error code",
+                            label = stringResource(AppRes.string.bug_report_error_code),
                             value = "$it"
                         )
                     }
 
                     state.logId?.let {
                         SummaryRow(
-                            label = "Report id",
+                            label = stringResource(AppRes.string.bug_report_report_id),
                             value = it
                         )
                     }
@@ -93,7 +105,7 @@ fun BugReportScreen(
             }
 
             Text(
-                text = "Help us understand what went wrong. We would love to fix it!",
+                text = stringResource(AppRes.string.bug_report_subtitle),
                 typography = AppTheme.typography.Body.B700,
                 color = AppTheme.colors.textSecondary
             )
@@ -109,8 +121,8 @@ fun BugReportScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(Dimension.D1900),
-                label = { Text("Message") },
-                placeholder = { Text("Describe what happened…") },
+                label = { Text(stringResource(AppRes.string.common_message_label)) },
+                placeholder = { Text(stringResource(AppRes.string.common_describe_placeholder)) },
                 singleLine = false,
                 minLines = 6,
                 maxLines = 10,
@@ -140,7 +152,7 @@ fun BugReportScreen(
                 }
 
                 Text(
-                    text = "$messageLength/$BUG_REPORT_CHAR_LIMIT",
+                    text = stringResource(AppRes.string.char_counter, messageLength, BUG_REPORT_CHAR_LIMIT),
                     color = counterColor,
                     typography = AppTheme.typography.Body.B500
                 )
@@ -168,7 +180,7 @@ fun BugReportScreen(
                     }
                 }
             ) {
-                Text(if (state.isSubmitting) "Sending…" else "Send")
+                Text(if (state.isSubmitting) stringResource(AppRes.string.common_sending) else stringResource(AppRes.string.common_send))
             }
 
             VerticalSpacerD500()

@@ -14,31 +14,11 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Serializable
 data class AppData(
-    // Onboarding
     val hasUserOnboarded: Boolean = false,
-
-    // Whether we've checked whether to seed starter timers on first launch.
     val hasCheckedStarterTimers: Boolean = false,
-
-    // Screen visits - automatically tracked for any TrackableRoute
-    val screenVisits: Map<String, Int> = emptyMap(),
-
-    // User actions
     val feedbacksGiven: Int = 0,
     val bugsReported: Int = 0,
-) {
-    /**
-     * Get the visit count for a screen by its tracking key.
-     */
-    fun getVisitCount(trackingKey: String): Int = screenVisits[trackingKey] ?: 0
-    
-    /**
-     * Increment the visit count for a screen.
-     */
-    fun incrementVisit(trackingKey: String): AppData = copy(
-        screenVisits = screenVisits + (trackingKey to (getVisitCount(trackingKey) + 1))
-    )
-}
+)
 
 interface AppCache : Cache<AppData>
 

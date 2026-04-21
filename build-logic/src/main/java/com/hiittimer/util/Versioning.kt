@@ -43,11 +43,16 @@ fun Project.loadVersionMetadata(): VersionMetadata {
     fun Properties.int(key: String, defaultValue: Int): Int =
         string(key, defaultValue.toString()).toIntOrNull() ?: defaultValue
 
+    fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
+
     val applicationId = properties.string("applicationId", DEFAULT_APPLICATION_ID)
     val versionName = properties.string("versionName", DEFAULT_VERSION_NAME)
-    val versionCode = properties.int("versionCode", DEFAULT_VERSION_CODE)
-    val releaseChannel = properties.string("releaseChannel", DEFAULT_RELEASE_CHANNEL)
-    val buildNumber = properties.int("buildNumber", DEFAULT_BUILD_NUMBER)
+    val versionCode = env("VERSION_CODE_OVERRIDE")?.toIntOrNull()
+        ?: properties.int("versionCode", DEFAULT_VERSION_CODE)
+    val releaseChannel = env("RELEASE_CHANNEL_OVERRIDE")
+        ?: properties.string("releaseChannel", DEFAULT_RELEASE_CHANNEL)
+    val buildNumber = env("BUILD_NUMBER_OVERRIDE")?.toIntOrNull()
+        ?: properties.int("buildNumber", DEFAULT_BUILD_NUMBER)
 
     return VersionMetadata(
         applicationId = applicationId,

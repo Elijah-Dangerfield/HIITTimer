@@ -14,67 +14,14 @@ platform :ios do
     setup_ci if ENV["CI"]
   end
 
-  desc "Build a release ipa and upload to TestFlight"
+  desc "Preview: upload to TestFlight internal only (used on pushes to main)"
   lane :beta do
-    team_id = ENV.fetch("APPLE_TEAM_ID")
-    key_id = ENV.fetch("ASC_KEY_ID")
-    issuer_id = ENV.fetch("ASC_ISSUER_ID")
-    key_content_b64 = ENV.fetch("ASC_KEY_P8_BASE64")
+    build_and_upload(distribute_external: false, submit_to_app_store: false)
+  end
 
-    api_key = app_store_connect_api_key(
-      key_id: key_id,
-      issuer_id: issuer_id,
-      key_content: key_content_b64,
-      is_key_content_base64: true,
-      duration: 1200,
-      in_house: false,
-    )
-
-    # Write .p8 to a temp file so xcodebuild's -authenticationKeyPath can read it.
-    # Without this, -allowProvisioningUpdates can't talk to App Store Connect and
-    # signing fails with "No Accounts" / "No profiles found".
-    asc_key_path = File.join(Dir.tmpdir, "AuthKey_#{key_id}.p8")
-    File.binwrite(asc_key_path, Base64.decode64(key_content_b64))
-
-    build_number = ENV["GITHUB_RUN_NUMBER"] || Time.now.strftime("%Y%m%d%H%M")
-    marketing_version = read_marketing_version || "1.0"
-
-    build_app(
-      project: XCODEPROJ,
-      scheme: SCHEME,
-      configuration: CONFIGURATION,
-      export_method: "app-store",
-      output_directory: OUTPUT_DIR,
-      output_name: OUTPUT_NAME,
-      clean: true,
-      silent: false,
-      xcargs: [
-        "-allowProvisioningUpdates",
-        "-authenticationKeyPath", asc_key_path,
-        "-authenticationKeyID", key_id,
-        "-authenticationKeyIssuerID", issuer_id,
-        "DEVELOPMENT_TEAM=#{team_id}",
-        "CODE_SIGN_STYLE=Automatic",
-        "CURRENT_PROJECT_VERSION=#{build_number}",
-      ].join(" "),
-      export_options: {
-        method: "app-store",
-        signingStyle: "automatic",
-        teamID: team_id,
-      },
-    )
-
-    changelog = build_changelog(build_number, marketing_version)
-
-    upload_to_testflight(
-      api_key: api_key,
-      ipa: File.join(OUTPUT_DIR, OUTPUT_NAME),
-      skip_waiting_for_build_processing: true,
-      changelog: changelog,
-      distribute_external: false,
-    )
-  ensure
-    File.delete(asc_key_path) if defined?(asc_key_path) && asc_key_path && File.exist?(asc_key_path)
+  desc "Production: TestFlight external group + App Store submit + phased rollout"
+  lane :release do
+    build_and_upload(distribute_external: true, submit_to_app_store: true)
   end
 
   desc "Local-only: build without uploading (smoke-test the Fastfile)"
@@ -92,6 +39,95 @@ platform :ios do
       xcargs: "CURRENT_PROJECT_VERSION=#{build_number}",
     )
   end
+end
+
+def build_and_upload(distribute_external:, submit_to_app_store:)
+  team_id = ENV.fetch("APPLE_TEAM_ID")
+  key_id = ENV.fetch("ASC_KEY_ID")
+  issuer_id = ENV.fetch("ASC_ISSUER_ID")
+  key_content_b64 = ENV.fetch("ASC_KEY_P8_BASE64")
+
+  api_key = app_store_connect_api_key(
+    key_id: key_id,
+    issuer_id: issuer_id,
+    key_content: key_content_b64,
+    is_key_content_base64: true,
+    duration: 1200,
+    in_house: false,
+  )
+
+  # Write .p8 to a temp file so xcodebuild's -authenticationKeyPath can read it.
+  # Without this, -allowProvisioningUpdates can't talk to App Store Connect and
+  # signing fails with "No Accounts" / "No profiles found".
+  asc_key_path = File.join(Dir.tmpdir, "AuthKey_#{key_id}.p8")
+  File.binwrite(asc_key_path, Base64.decode64(key_content_b64))
+
+  build_number = ENV["GITHUB_RUN_NUMBER"] || Time.now.strftime("%Y%m%d%H%M")
+  marketing_version = read_marketing_version || "1.0"
+
+  build_app(
+    project: XCODEPROJ,
+    scheme: SCHEME,
+    configuration: CONFIGURATION,
+    export_method: "app-store",
+    output_directory: OUTPUT_DIR,
+    output_name: OUTPUT_NAME,
+    clean: true,
+    silent: false,
+    xcargs: [
+      "-allowProvisioningUpdates",
+      "-authenticationKeyPath", asc_key_path,
+      "-authenticationKeyID", key_id,
+      "-authenticationKeyIssuerID", issuer_id,
+      "DEVELOPMENT_TEAM=#{team_id}",
+      "CODE_SIGN_STYLE=Automatic",
+      "CURRENT_PROJECT_VERSION=#{build_number}",
+    ].join(" "),
+    export_options: {
+      method: "app-store",
+      signingStyle: "automatic",
+      teamID: team_id,
+    },
+  )
+
+  changelog = build_changelog(build_number, marketing_version)
+  ipa_path = File.join(OUTPUT_DIR, OUTPUT_NAME)
+
+  external_group = ENV["TESTFLIGHT_EXTERNAL_GROUP"] || "main"
+  upload_to_testflight(
+    api_key: api_key,
+    ipa: ipa_path,
+    skip_waiting_for_build_processing: !distribute_external,
+    changelog: changelog,
+    distribute_external: distribute_external,
+    groups: distribute_external ? [external_group] : nil,
+    notify_external_testers: distribute_external,
+    reject_build_waiting_for_review: false,
+  )
+
+  if submit_to_app_store
+    deliver(
+      api_key: api_key,
+      app_version: marketing_version,
+      build_number: build_number.to_s,
+      submit_for_review: true,
+      automatic_release: true,
+      phased_release: true,
+      force: true,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      precheck_include_in_app_purchases: false,
+      submission_information: {
+        export_compliance_uses_encryption: false,
+        add_id_info_uses_idfa: false,
+      },
+    )
+  end
+
+  upload_sentry_release(marketing_version, build_number)
+ensure
+  File.delete(asc_key_path) if defined?(asc_key_path) && asc_key_path && File.exist?(asc_key_path)
 end
 
 def read_marketing_version
@@ -119,4 +155,18 @@ def build_changelog(build_number, marketing_version)
     sha_short.empty? ? nil : "commit: #{sha_short}",
     subject.empty? ? nil : subject,
   ].compact.join("\n")
+end
+
+def upload_sentry_release(marketing_version, build_number)
+  return unless ENV["SENTRY_AUTH_TOKEN"] && !ENV["SENTRY_AUTH_TOKEN"].empty?
+  org = ENV.fetch("SENTRY_ORG")
+  project = ENV.fetch("SENTRY_PROJECT")
+  release = "hiittimer@#{marketing_version}+#{build_number}"
+  dsym_dir = File.join(OUTPUT_DIR)
+  sh("npx @sentry/cli releases new #{release} --org #{org} --project #{project}")
+  sh("npx @sentry/cli releases set-commits #{release} --auto --org #{org} --project #{project} || true")
+  sh("npx @sentry/cli debug-files upload --org #{org} --project #{project} #{dsym_dir}")
+  sh("npx @sentry/cli releases finalize #{release} --org #{org} --project #{project}")
+rescue => e
+  UI.important("Sentry release upload failed: #{e.message} (non-fatal)")
 end

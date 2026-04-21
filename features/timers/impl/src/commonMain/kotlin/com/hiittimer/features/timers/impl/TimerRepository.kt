@@ -6,9 +6,14 @@ import com.dangerfield.hiittimer.features.timers.storage.db.BlockEntity
 import com.dangerfield.hiittimer.features.timers.storage.db.TimerDao
 import com.dangerfield.hiittimer.features.timers.storage.db.TimerEntity
 import com.dangerfield.hiittimer.features.timers.storage.db.TimerWithBlocks
+import com.dangerfield.hiittimer.system.color.defaultRunnerColors
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import me.tatarka.inject.annotations.Inject
+import org.jetbrains.compose.resources.getString
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.starter_block_rest
+import rounds.libraries.resources.generated.resources.starter_block_work
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
@@ -56,8 +61,8 @@ class TimerRepositoryImpl(
             updatedAt = now,
         )
         dao.upsertTimer(entity)
-        val work = Block(Uuid.random().toString(), "Work", 30.seconds, ColorPalette.defaultWorkArgb)
-        val rest = Block(Uuid.random().toString(), "Rest", 15.seconds, ColorPalette.defaultRestArgb)
+        val work = Block(Uuid.random().toString(), getString(AppRes.string.starter_block_work), 30.seconds, defaultRunnerColors.defaultWorkArgb)
+        val rest = Block(Uuid.random().toString(), getString(AppRes.string.starter_block_rest), 15.seconds, defaultRunnerColors.defaultRestArgb)
         dao.upsertBlocks(
             listOf(
                 work.toEntity(id, sortOrder = 0),

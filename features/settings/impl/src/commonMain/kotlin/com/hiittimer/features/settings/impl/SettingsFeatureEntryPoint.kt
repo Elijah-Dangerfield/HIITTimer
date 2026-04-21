@@ -7,10 +7,13 @@ import androidx.navigation.toRoute
 import com.dangerfield.hiittimer.features.settings.BugReportRoute
 import com.dangerfield.hiittimer.features.settings.FeedbackRoute
 import com.dangerfield.hiittimer.features.settings.SettingsRoute
+import com.dangerfield.hiittimer.features.settings.SoundSettingsRoute
 import com.dangerfield.hiittimer.features.settings.impl.bugreport.BugReportScreen
 import com.dangerfield.hiittimer.features.settings.impl.bugreport.BugReportViewModel
 import com.dangerfield.hiittimer.features.settings.impl.feedback.FeedbackScreen
 import com.dangerfield.hiittimer.features.settings.impl.feedback.FeedbackViewModel
+import com.dangerfield.hiittimer.features.settings.impl.sound.SoundSettingsScreen
+import com.dangerfield.hiittimer.features.settings.impl.sound.SoundSettingsViewModel
 import com.dangerfield.hiittimer.libraries.navigation.FeatureEntryPoint
 import com.dangerfield.hiittimer.libraries.navigation.Router
 import com.dangerfield.hiittimer.libraries.navigation.screen
@@ -24,6 +27,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @Inject
 class SettingsFeatureEntryPoint(
     private val settingsViewModelFactory: () -> SettingsViewModel,
+    private val soundSettingsViewModelFactory: () -> SoundSettingsViewModel,
     private val feedbackViewModelFactory: () -> FeedbackViewModel,
     private val bugReportViewModelFactory: (logId: String?, errorCode: Int?, contextMessage: String?) -> BugReportViewModel,
 ) : FeatureEntryPoint {
@@ -37,6 +41,15 @@ class SettingsFeatureEntryPoint(
                 onOpenUrl = { router.openWebLink(it) },
                 onNavigateToFeedback = { router.navigate(FeedbackRoute()) },
                 onNavigateToBugReport = { router.navigate(BugReportRoute()) },
+                onNavigateToSoundSettings = { router.navigate(SoundSettingsRoute()) },
+            )
+        }
+
+        screen<SoundSettingsRoute> {
+            val vm: SoundSettingsViewModel = viewModel { soundSettingsViewModelFactory() }
+            SoundSettingsScreen(
+                viewModel = vm,
+                onBack = { router.goBack() },
             )
         }
 

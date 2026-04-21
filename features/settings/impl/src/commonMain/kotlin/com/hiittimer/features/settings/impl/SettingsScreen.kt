@@ -12,22 +12,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.dangerfield.hiittimer.features.timers.SoundMode
-import com.dangerfield.hiittimer.features.timers.SoundPack
 import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
-import com.dangerfield.hiittimer.libraries.ui.components.HorizontalDivider
+import com.dangerfield.hiittimer.libraries.ui.PreviewContent
 import com.dangerfield.hiittimer.libraries.ui.components.ListItemAccessory
 import com.dangerfield.hiittimer.libraries.ui.components.ListSection
 import com.dangerfield.hiittimer.libraries.ui.components.ListSectionItem
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
-import com.dangerfield.hiittimer.libraries.ui.components.Surface
-import com.dangerfield.hiittimer.system.Radii
-import kotlin.math.roundToInt
 import com.dangerfield.hiittimer.libraries.ui.components.icon.Icon
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconButton
 import com.dangerfield.hiittimer.libraries.ui.components.icon.IconResource
@@ -36,6 +30,42 @@ import com.dangerfield.hiittimer.libraries.ui.components.icon.Icons
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.Dimension
+import org.jetbrains.compose.resources.stringResource
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.app_name
+import rounds.libraries.resources.generated.resources.cd_back
+import rounds.libraries.resources.generated.resources.cd_bug
+import rounds.libraries.resources.generated.resources.cd_feedback
+import rounds.libraries.resources.generated.resources.cd_haptics
+import rounds.libraries.resources.generated.resources.cd_privacy_policy
+import rounds.libraries.resources.generated.resources.cd_progress_bar
+import rounds.libraries.resources.generated.resources.cd_rate
+import rounds.libraries.resources.generated.resources.cd_sound
+import rounds.libraries.resources.generated.resources.cd_terms_of_service
+import rounds.libraries.resources.generated.resources.cd_tip_jar
+import rounds.libraries.resources.generated.resources.settings_haptics
+import rounds.libraries.resources.generated.resources.settings_haptics_subtitle
+import rounds.libraries.resources.generated.resources.settings_leave_feedback
+import rounds.libraries.resources.generated.resources.settings_leave_feedback_subtitle
+import rounds.libraries.resources.generated.resources.settings_privacy_policy
+import rounds.libraries.resources.generated.resources.settings_rate_app
+import rounds.libraries.resources.generated.resources.settings_report_bug
+import rounds.libraries.resources.generated.resources.settings_report_bug_subtitle
+import rounds.libraries.resources.generated.resources.settings_section_audio
+import rounds.libraries.resources.generated.resources.settings_section_feedback
+import rounds.libraries.resources.generated.resources.settings_section_legal
+import rounds.libraries.resources.generated.resources.settings_section_runner
+import rounds.libraries.resources.generated.resources.settings_section_support
+import rounds.libraries.resources.generated.resources.settings_show_progress
+import rounds.libraries.resources.generated.resources.settings_show_progress_subtitle
+import rounds.libraries.resources.generated.resources.settings_sound_off
+import rounds.libraries.resources.generated.resources.settings_sound_on
+import rounds.libraries.resources.generated.resources.settings_sound_settings
+import rounds.libraries.resources.generated.resources.settings_terms_of_service
+import rounds.libraries.resources.generated.resources.settings_tip_jar
+import rounds.libraries.resources.generated.resources.settings_tip_jar_subtitle
+import rounds.libraries.resources.generated.resources.settings_title
+import rounds.libraries.resources.generated.resources.settings_version_build
 
 @Composable
 fun SettingsScreen(
@@ -44,6 +74,7 @@ fun SettingsScreen(
     onOpenUrl: (String) -> Unit,
     onNavigateToFeedback: () -> Unit,
     onNavigateToBugReport: () -> Unit,
+    onNavigateToSoundSettings: () -> Unit,
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
 
@@ -52,9 +83,23 @@ fun SettingsScreen(
             is SettingsEvent.OpenUrl -> onOpenUrl(event.url)
             SettingsEvent.NavigateToFeedback -> onNavigateToFeedback()
             SettingsEvent.NavigateToBugReport -> onNavigateToBugReport()
+            SettingsEvent.NavigateToSoundSettings -> onNavigateToSoundSettings()
         }
     }
 
+    SettingsContent(
+        state = state,
+        onBack = onBack,
+        onAction = viewModel::takeAction,
+    )
+}
+
+@Composable
+private fun SettingsContent(
+    state: SettingsState,
+    onBack: () -> Unit,
+    onAction: (SettingsAction) -> Unit,
+) {
     val scroll = rememberScrollState()
 
     Screen(modifier = Modifier.fillMaxSize()) { padding ->
@@ -70,57 +115,31 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(Dimension.D900))
 
                 ListSection(
-                    title = "Audio",
+                    title = stringResource(AppRes.string.settings_section_audio),
                     items = listOf(
                         ListSectionItem(
-                            headlineText = "Sound",
-                            supportingText = soundModeSubtitle(state.soundMode),
-                            leadingContent = { SettingsIcon(Icons.VolumeUp("Sound")) },
-                            accessory = ListItemAccessory.Text(state.soundMode.displayName()),
-                            onClick = { viewModel.takeAction(SettingsAction.CycleSoundMode) },
-                        ),
-                        ListSectionItem(
-                            headlineText = "Sound pack",
-                            supportingText = soundPackSubtitle(state.soundPack),
-                            leadingContent = { SettingsIcon(Icons.Dot("Sound pack")) },
-                            accessory = ListItemAccessory.Text(state.soundPack.displayName),
-                            onClick = { viewModel.takeAction(SettingsAction.CycleSoundPack) },
-                        ),
-                        ListSectionItem(
-                            headlineText = "Halfway callouts",
-                            supportingText = "Cue at the midpoint of each block.",
-                            leadingContent = { SettingsIcon(Icons.Dot("Halfway")) },
-                            accessory = ListItemAccessory.Switch(
-                                checked = state.halfwayCallouts,
-                                onCheckedChange = {
-                                    viewModel.takeAction(SettingsAction.SetHalfwayCallouts(it))
-                                },
-                            ),
-                            onClick = null,
+                            headlineText = stringResource(AppRes.string.settings_sound_settings),
+                            supportingText = if (state.soundsEnabled) stringResource(AppRes.string.settings_sound_on) else stringResource(AppRes.string.settings_sound_off),
+                            leadingContent = { SettingsIcon(Icons.VolumeUp(stringResource(AppRes.string.cd_sound))) },
+                            accessory = ListItemAccessory.Chevron,
+                            onClick = { onAction(SettingsAction.OpenSoundSettings) },
                         ),
                     )
-                )
-
-                Spacer(modifier = Modifier.height(Dimension.D500))
-
-                VolumeRow(
-                    volume = state.cueVolume,
-                    onVolumeChange = { viewModel.takeAction(SettingsAction.SetCueVolume(it)) },
                 )
 
                 Spacer(modifier = Modifier.height(Dimension.D1000))
 
                 ListSection(
-                    title = "Feedback",
+                    title = stringResource(AppRes.string.settings_section_feedback),
                     items = listOf(
                         ListSectionItem(
-                            headlineText = "Haptics",
-                            supportingText = "Vibrate on transitions and countdown.",
-                            leadingContent = { SettingsIcon(Icons.Dot("Haptics")) },
+                            headlineText = stringResource(AppRes.string.settings_haptics),
+                            supportingText = stringResource(AppRes.string.settings_haptics_subtitle),
+                            leadingContent = { SettingsIcon(Icons.Dot(stringResource(AppRes.string.cd_haptics))) },
                             accessory = ListItemAccessory.Switch(
                                 checked = state.hapticsEnabled,
                                 onCheckedChange = {
-                                    viewModel.takeAction(SettingsAction.SetHapticsEnabled(it))
+                                    onAction(SettingsAction.SetHapticsEnabled(it))
                                 },
                             ),
                             onClick = null,
@@ -131,16 +150,16 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(Dimension.D1000))
 
                 ListSection(
-                    title = "Runner",
+                    title = stringResource(AppRes.string.settings_section_runner),
                     items = listOf(
                         ListSectionItem(
-                            headlineText = "Show progress bar",
-                            supportingText = "Total workout progress while running.",
-                            leadingContent = { SettingsIcon(Icons.Chart("Progress bar")) },
+                            headlineText = stringResource(AppRes.string.settings_show_progress),
+                            supportingText = stringResource(AppRes.string.settings_show_progress_subtitle),
+                            leadingContent = { SettingsIcon(Icons.Chart(stringResource(AppRes.string.cd_progress_bar))) },
                             accessory = ListItemAccessory.Switch(
                                 checked = state.showProgressBar,
                                 onCheckedChange = {
-                                    viewModel.takeAction(SettingsAction.SetShowProgressBar(it))
+                                    onAction(SettingsAction.SetShowProgressBar(it))
                                 },
                             ),
                             onClick = null,
@@ -151,30 +170,50 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(Dimension.D1000))
 
                 ListSection(
-                    title = "Support",
+                    title = stringResource(AppRes.string.settings_section_support),
                     items = listOf(
                         ListSectionItem(
-                            headlineText = "Rate the app",
-                            leadingContent = { SettingsIcon(Icons.ThumbsUp("Rate")) },
-                            onClick = { viewModel.takeAction(SettingsAction.RateApp) },
+                            headlineText = stringResource(AppRes.string.settings_rate_app),
+                            leadingContent = { SettingsIcon(Icons.ThumbsUp(stringResource(AppRes.string.cd_rate))) },
+                            onClick = { onAction(SettingsAction.RateApp) },
                         ),
                         ListSectionItem(
-                            headlineText = "Tip jar",
-                            supportingText = "Buy me a coffee.",
-                            leadingContent = { SettingsIcon(Icons.TipJar("Tip jar")) },
-                            onClick = { viewModel.takeAction(SettingsAction.OpenTipJar) },
+                            headlineText = stringResource(AppRes.string.settings_tip_jar),
+                            supportingText = stringResource(AppRes.string.settings_tip_jar_subtitle),
+                            leadingContent = { SettingsIcon(Icons.TipJar(stringResource(AppRes.string.cd_tip_jar))) },
+                            onClick = { onAction(SettingsAction.OpenTipJar) },
                         ),
                         ListSectionItem(
-                            headlineText = "Leave feedback",
-                            supportingText = "Tell me what you think.",
-                            leadingContent = { SettingsIcon(Icons.Chat("Feedback")) },
-                            onClick = { viewModel.takeAction(SettingsAction.LeaveFeedback) },
+                            headlineText = stringResource(AppRes.string.settings_leave_feedback),
+                            supportingText = stringResource(AppRes.string.settings_leave_feedback_subtitle),
+                            leadingContent = { SettingsIcon(Icons.Chat(stringResource(AppRes.string.cd_feedback))) },
+                            onClick = { onAction(SettingsAction.LeaveFeedback) },
                         ),
                         ListSectionItem(
-                            headlineText = "Report a bug",
-                            supportingText = "Something not working right?",
-                            leadingContent = { SettingsIcon(Icons.Bug("Bug")) },
-                            onClick = { viewModel.takeAction(SettingsAction.ReportBug) },
+                            headlineText = stringResource(AppRes.string.settings_report_bug),
+                            supportingText = stringResource(AppRes.string.settings_report_bug_subtitle),
+                            leadingContent = { SettingsIcon(Icons.Bug(stringResource(AppRes.string.cd_bug))) },
+                            onClick = { onAction(SettingsAction.ReportBug) },
+                        ),
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(Dimension.D1000))
+
+                ListSection(
+                    title = stringResource(AppRes.string.settings_section_legal),
+                    items = listOf(
+                        ListSectionItem(
+                            headlineText = stringResource(AppRes.string.settings_privacy_policy),
+                            leadingContent = { SettingsIcon(Icons.Lock(stringResource(AppRes.string.cd_privacy_policy))) },
+                            accessory = ListItemAccessory.Chevron,
+                            onClick = { onAction(SettingsAction.OpenPrivacyPolicy) },
+                        ),
+                        ListSectionItem(
+                            headlineText = stringResource(AppRes.string.settings_terms_of_service),
+                            leadingContent = { SettingsIcon(Icons.Info(stringResource(AppRes.string.cd_terms_of_service))) },
+                            accessory = ListItemAccessory.Chevron,
+                            onClick = { onAction(SettingsAction.OpenTermsOfService) },
                         ),
                     )
                 )
@@ -186,13 +225,13 @@ fun SettingsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "HIIT Timer",
+                        text = stringResource(AppRes.string.app_name),
                         typography = AppTheme.typography.Body.B400,
                         color = AppTheme.colors.textSecondary,
                     )
                     Spacer(modifier = Modifier.height(Dimension.D200))
                     Text(
-                        text = "v${state.versionName} (${state.buildNumber})",
+                        text = stringResource(AppRes.string.settings_version_build, state.versionName, state.buildNumber.toString()),
                         typography = AppTheme.typography.Caption.C400,
                         color = AppTheme.colors.textSecondary,
                     )
@@ -212,9 +251,9 @@ private fun Header(onBack: () -> Unit) {
             .padding(horizontal = Dimension.D400, vertical = Dimension.D400),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(icon = Icons.ArrowBack("Back"), onClick = onBack)
+        IconButton(icon = Icons.ArrowBack(stringResource(AppRes.string.cd_back)), onClick = onBack)
         Spacer(modifier = Modifier.size(Dimension.D300))
-        Text(text = "Settings", typography = AppTheme.typography.Heading.H800)
+        Text(text = stringResource(AppRes.string.settings_title), typography = AppTheme.typography.Heading.H800)
     }
 }
 
@@ -227,79 +266,21 @@ private fun SettingsIcon(icon: IconResource) {
     )
 }
 
-private fun SoundMode.displayName(): String = when (this) {
-    SoundMode.Off -> "Off"
-    SoundMode.Beeps -> "Beeps"
-    SoundMode.Voice -> "Voice"
-}
-
-private fun soundModeSubtitle(mode: SoundMode): String = when (mode) {
-    SoundMode.Off -> "No sound during workout."
-    SoundMode.Beeps -> "Short tones on transitions and countdown."
-    SoundMode.Voice -> "Spoken block names and countdown."
-}
-
-private fun soundPackSubtitle(pack: SoundPack): String = when (pack) {
-    SoundPack.Classic -> "Clean sine-wave beeps."
-    SoundPack.Chime -> "Soft, resonant chimes."
-    SoundPack.Bell -> "Struck bell, metallic and punchy."
-}
-
 @Composable
-private fun VolumeRow(
-    volume: Float,
-    onVolumeChange: (Float) -> Unit,
-) {
-    Surface(
-        color = AppTheme.colors.surfacePrimary,
-        contentColor = AppTheme.colors.onSurfacePrimary,
-        radius = Radii.Card,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            horizontal = Dimension.D600,
-            vertical = Dimension.D500,
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SettingsIcon(Icons.VolumeUp("Cue volume"))
-                Spacer(modifier = Modifier.size(Dimension.D500))
-                Text(
-                    text = "Cue volume",
-                    typography = AppTheme.typography.Body.B700.SemiBold,
-                    modifier = Modifier.fillMaxWidth().padding(end = Dimension.D400),
-                )
-            }
-            Spacer(modifier = Modifier.height(Dimension.D300))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Slider(
-                    value = volume,
-                    onValueChange = onVolumeChange,
-                    modifier = Modifier.fillMaxWidth().padding(end = Dimension.D400),
-                    colors = SliderDefaults.colors(
-                        thumbColor = AppTheme.colors.accentPrimary.color,
-                        activeTrackColor = AppTheme.colors.accentPrimary.color,
-                        inactiveTrackColor = AppTheme.colors.surfaceDisabled.color,
-                    ),
-                )
-                Text(
-                    text = "${(volume * 100).roundToInt()}%",
-                    typography = AppTheme.typography.Label.L400,
-                    color = AppTheme.colors.textSecondary,
-                )
-            }
-            Spacer(modifier = Modifier.height(Dimension.D100))
-            Text(
-                text = "Independent from your phone volume. Music stays loud; cues stay whatever you pick.",
-                typography = AppTheme.typography.Body.B400,
-                color = AppTheme.colors.textSecondary,
-            )
-        }
+@Preview
+private fun SettingsContentPreview() {
+    PreviewContent {
+        SettingsContent(
+            state = SettingsState(
+                soundsEnabled = true,
+                cueVolume = 0.8f,
+                hapticsEnabled = true,
+                showProgressBar = true,
+                versionName = "1.2.0",
+                buildNumber = 42,
+            ),
+            onBack = {},
+            onAction = {},
+        )
     }
 }

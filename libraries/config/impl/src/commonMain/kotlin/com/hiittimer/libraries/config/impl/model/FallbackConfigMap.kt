@@ -7,7 +7,7 @@ import kotlinx.coroutines.runBlocking
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
-import hiittimer.libraries.config.impl.generated.resources.Res
+import rounds.libraries.config.impl.generated.resources.Res
 
 @SingleIn(AppScope::class)
 class FallbackConfigMap @Inject constructor(

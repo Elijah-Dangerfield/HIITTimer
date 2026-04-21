@@ -17,6 +17,11 @@ import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonStyle
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonType
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import androidx.compose.ui.tooling.preview.Preview
+import org.jetbrains.compose.resources.stringResource
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.settings_report_bug
+import rounds.libraries.resources.generated.resources.shake_dialog_dismiss
+import rounds.libraries.resources.generated.resources.shake_dialog_dont_show_again
 
 @Composable
 fun ShakeDialog(
@@ -26,6 +31,7 @@ fun ShakeDialog(
     onReportBug: () -> Unit,
     modifier: Modifier = Modifier,
     state: DialogState = rememberDialogState(),
+    onDontShowAgain: (() -> Unit)? = null,
 ) {
     BasicDialog(
         state = state,
@@ -66,18 +72,35 @@ fun ShakeDialog(
                     size = ButtonSize.Medium,
                     type = ButtonType.Danger,
                 ) {
-                    Text("Report a bug")
+                    Text(stringResource(AppRes.string.settings_report_bug))
                 }
-                
+
                 Spacer(modifier = Modifier.height(Dimension.D500))
-                
+
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
                     size = ButtonSize.Medium,
                     style = ButtonStyle.Text
                 ) {
-                    Text("Dismiss")
+                    Text(stringResource(AppRes.string.shake_dialog_dismiss))
+                }
+
+                if (onDontShowAgain != null) {
+                    Button(
+                        onClick = {
+                            state.dismiss()
+                            onDontShowAgain()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        size = ButtonSize.Small,
+                        style = ButtonStyle.Text,
+                    ) {
+                        Text(
+                            text = stringResource(AppRes.string.shake_dialog_dont_show_again),
+                            color = AppTheme.colors.textSecondary,
+                        )
+                    }
                 }
             }
         }

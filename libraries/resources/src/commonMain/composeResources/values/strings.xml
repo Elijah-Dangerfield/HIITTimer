@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Centralized user-facing strings for the whole app.
+
+  Naming conventions:
+    common_*          — shared across screens (button labels, placeholders)
+    cd_*              — accessibility / contentDescription labels
+    action_*          — short imperative buttons (e.g., "Save", "Delete")
+    <screen>_*        — screen-scoped copy (settings_*, runner_*, sound_settings_*, …)
+
+  Access from Kotlin:
+    import rounds.libraries.resources.generated.resources.Res as AppRes
+    import org.jetbrains.compose.resources.stringResource
+    stringResource(AppRes.string.settings_title)
+
+  For format args: stringResource(AppRes.string.key, arg1, arg2)
+-->
+<resources>
+    <!-- Global / app-wide identity -->
+    <string name="app_name">Rounds</string>
+
+    <!-- Common / shared -->
+    <string name="common_send">Send</string>
+    <string name="common_sending">Sending…</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_back">Back</string>
+    <string name="common_describe_placeholder">Describe what happened…</string>
+    <string name="common_message_label">Message</string>
+    <string name="common_untitled">Untitled</string>
+    <string name="common_done">Done</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_keep_going">Keep going</string>
+    <string name="action_dont_ask_again">Don't ask again</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_back">Back</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_preview">Preview</string>
+    <string name="cd_play">Play</string>
+    <string name="cd_sound">Sound</string>
+    <string name="cd_haptics">Haptics</string>
+    <string name="cd_progress_bar">Progress bar</string>
+    <string name="cd_rate">Rate</string>
+    <string name="cd_tip_jar">Tip jar</string>
+    <string name="cd_feedback">Feedback</string>
+    <string name="cd_bug">Bug</string>
+    <string name="cd_privacy_policy">Privacy policy</string>
+    <string name="cd_terms_of_service">Terms of service</string>
+    <string name="cd_volume">Volume</string>
+    <string name="cd_change_voice">Change voice</string>
+    <string name="cd_selected">Selected</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_rounds_logo">Rounds</string>
+    <string name="cd_create_timer">Create timer</string>
+    <string name="cd_start">Start</string>
+    <string name="cd_more">More</string>
+    <string name="cd_duplicate">Duplicate</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_delete_block">Delete block</string>
+    <string name="cd_delete_timer">Delete timer</string>
+    <string name="cd_edit_name">Edit name</string>
+    <string name="cd_add">Add</string>
+    <string name="cd_drag_to_reorder">Drag to reorder</string>
+    <string name="cd_decrease_rounds">Decrease rounds</string>
+    <string name="cd_increase_rounds">Increase rounds</string>
+    <string name="cd_start_workout">Start workout</string>
+    <string name="cd_exit_runner">Exit runner</string>
+    <string name="cd_reset_this_block">Reset this block</string>
+    <string name="cd_resume">Resume</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_skip_block">Skip block</string>
+    <string name="cd_sound_on">Sound on</string>
+    <string name="cd_sound_off">Sound off</string>
+    <string name="cd_muted">Muted</string>
+    <string name="cd_volume_low">Volume low</string>
+    <string name="cd_volume_high">Volume high</string>
+    <string name="cd_new_timer">New timer</string>
+
+    <!-- Home -->
+    <string name="home_welcome">Welcome to Rounds</string>
+    <string name="home_greeting">Hello, %1$s!</string>
+    <string name="home_empty_subtitle">This is your starting point.\nBuild something amazing!</string>
+    <string name="home_send_feedback">Send Feedback</string>
+    <string name="home_report_bug">Report a Bug</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_audio">Audio</string>
+    <string name="settings_section_feedback">Feedback</string>
+    <string name="settings_section_runner">Runner</string>
+    <string name="settings_section_legal">Legal</string>
+    <string name="settings_section_support">Support</string>
+    <string name="settings_sound_settings">Sound settings</string>
+    <string name="settings_sound_on">On</string>
+    <string name="settings_sound_off">Off</string>
+    <string name="settings_haptics">Haptics</string>
+    <string name="settings_haptics_subtitle">Vibrate on transitions and countdown.</string>
+    <string name="settings_show_progress">Show progress bar</string>
+    <string name="settings_show_progress_subtitle">Total workout progress while running.</string>
+    <string name="settings_rate_app">Rate the app</string>
+    <string name="settings_tip_jar">Tip jar</string>
+    <string name="settings_tip_jar_subtitle">Buy me a coffee.</string>
+    <string name="settings_leave_feedback">Leave feedback</string>
+    <string name="settings_leave_feedback_subtitle">Tell me what you think.</string>
+    <string name="settings_report_bug">Report a bug</string>
+    <string name="settings_report_bug_subtitle">Something not working right?</string>
+    <string name="settings_privacy_policy">Privacy policy</string>
+    <string name="settings_terms_of_service">Terms of service</string>
+    <string name="settings_version">v%1$s</string>
+    <string name="settings_version_build">v%1$s (%2$s)</string>
+
+    <!-- Sound settings -->
+    <string name="sound_settings_title">Sound Settings</string>
+    <string name="sound_settings_master_title">Sound cues</string>
+    <string name="sound_settings_master_subtitle">Master switch for all cues. Each role below chooses its own sound style.</string>
+    <string name="sound_settings_cues_header">Cue Sounds</string>
+    <string name="sound_settings_cues_subtitle">Pick a sound style for each moment. Tap a chip to preview.</string>
+    <string name="sound_settings_voice_label">Voice</string>
+    <string name="sound_settings_voice_system_default">System default</string>
+    <string name="sound_settings_halfway_title">Halfway callout</string>
+    <string name="sound_settings_halfway_subtitle">Play a cue at the midpoint of each block.</string>
+    <string name="sound_settings_volume_title">Cue Volume</string>
+    <string name="sound_settings_volume_subtitle">Independent from phone volume. Music stays loud; cues stay whatever you pick.</string>
+    <string name="sound_settings_volume_percent">%1$d%%</string>
+
+    <!-- Sound mode names -->
+    <string name="sound_mode_off">Off</string>
+    <string name="sound_mode_beeps">Beeps</string>
+    <string name="sound_mode_voice">Voice</string>
+
+    <!-- Sound pack names (beep packs) -->
+    <string name="sound_pack_classic">Classic</string>
+    <string name="sound_pack_chime">Chime</string>
+    <string name="sound_pack_bell">Bell</string>
+
+    <!-- Cue role names + descriptions -->
+    <string name="cue_role_countdown">Countdown</string>
+    <string name="cue_role_countdown_desc">Ticks at 3-2-1 before and at the end of each block.</string>
+    <string name="cue_role_block_start">Block start</string>
+    <string name="cue_role_block_start_desc">Signals the start of every block.</string>
+    <string name="cue_role_halfway">Halfway</string>
+    <string name="cue_role_halfway_desc">Midpoint marker for each block.</string>
+    <string name="cue_role_finish">Finish</string>
+    <string name="cue_role_finish_desc">Plays when the workout ends.</string>
+
+    <!-- Runner -->
+    <string name="runner_stop_title">Stop workout?</string>
+    <string name="runner_stop_body">You'll lose your progress for this run.</string>
+    <string name="runner_paused">Paused</string>
+    <string name="runner_preroll_get_ready">Get ready</string>
+    <string name="runner_preroll_get_set">Get set</string>
+    <string name="runner_preroll_go">Go!</string>
+    <string name="runner_up_first">Up first: %1$s</string>
+    <string name="runner_up_next">Up next: %1$s</string>
+    <string name="runner_sound_on">Sound on</string>
+    <string name="runner_sound_off">Sound off</string>
+    <string name="runner_finished_title">Crushed it.</string>
+    <string name="runner_finished_subtitle">Nice work on "%1$s".</string>
+    <string name="runner_recap_time">Time</string>
+    <string name="runner_recap_rounds">Rounds</string>
+    <string name="runner_recap_blocks">Blocks</string>
+    <string name="runner_support_title">Enjoying Rounds?</string>
+    <string name="runner_support_body">I absolutely refuse to throw in ads or make people pay. If you like the app, please consider buying me a coffee.</string>
+    <string name="runner_support_cta">Support →</string>
+    <string name="runner_summary_warmup">Warm up</string>
+    <string name="runner_summary_block">Block</string>
+    <string name="runner_summary_round">Round</string>
+    <string name="runner_summary_cooldown">Cool down</string>
+    <string name="runner_summary_fraction">%1$d/%2$d</string>
+    <string name="runner_elapsed_suffix">%1$s elapsed</string>
+    <string name="runner_left_suffix">%1$s left</string>
+    <string name="runner_volume_tooltip">Slide up or down over the screen to change the volume</string>
+    <string name="runner_percent">%1$d%%</string>
+
+    <!-- Feedback -->
+    <string name="feedback_title">Share Your Feedback</string>
+    <string name="feedback_subtitle">We'd love to hear from you</string>
+
+    <!-- Bug report -->
+    <string name="bug_report_title">Report a Bug</string>
+    <string name="bug_report_subtitle">Help us understand what went wrong. We would love to fix it!</string>
+    <string name="bug_report_captured_details">Captured details</string>
+    <string name="bug_report_error_code">Error code</string>
+    <string name="bug_report_report_id">Report id</string>
+
+    <!-- Character counter: current / max -->
+    <string name="char_counter">%1$d/%2$d</string>
+
+    <!-- Timer list -->
+    <string name="timer_list_empty_title">No timers yet</string>
+    <string name="timer_list_empty_subtitle">Tap the button below to build your first interval timer.</string>
+    <string name="timer_list_new">New timer</string>
+    <string name="timer_list_delete_title">Delete "%1$s"?</string>
+    <string name="timer_list_delete_body">This will remove the timer and its blocks. You can't undo this.</string>
+    <string name="timer_list_this_timer">this timer</string>
+    <string name="timer_list_subtitle_minutes_seconds">%1$dm %2$ds</string>
+    <string name="timer_list_subtitle_minutes">%1$dm</string>
+    <string name="timer_list_subtitle_seconds">%1$ds</string>
+    <string name="timer_list_subtitle_summary">%1$d blocks · %2$s</string>
+    <string name="timer_list_subtitle_summary_with_cycles">%1$d blocks · %2$s · %3$dx</string>
+
+    <!-- Timer detail -->
+    <string name="timer_detail_total_time">TOTAL TIME</string>
+    <string name="timer_detail_rounds">ROUNDS</string>
+    <string name="timer_detail_rounds_count">%1$dx</string>
+    <string name="timer_detail_warmup_header">WARM UP</string>
+    <string name="timer_detail_blocks_header">BLOCKS</string>
+    <string name="timer_detail_cooldown_header">COOL DOWN</string>
+    <string name="timer_detail_add_warmup">Add warm up</string>
+    <string name="timer_detail_add_block">Add block</string>
+    <string name="timer_detail_add_cooldown">Add cool down</string>
+    <string name="timer_detail_block_untitled">Block</string>
+    <string name="timer_detail_menu_duplicate">Duplicate</string>
+    <string name="timer_detail_menu_delete_timer">Delete timer</string>
+    <string name="timer_detail_delete_block_title">Delete this block?</string>
+    <string name="timer_detail_delete_block_body">You can't undo this.</string>
+
+    <!-- Block edit -->
+    <string name="block_edit_color_picker_title">Color</string>
+    <string name="block_edit_rename_title">Rename block</string>
+    <string name="block_edit_label_min">MIN</string>
+    <string name="block_edit_label_sec">SEC</string>
+
+    <!-- Presets / templates -->
+    <string name="presets_title">Choose a template</string>
+    <string name="presets_subtitle">Start with a preset or build your own</string>
+    <string name="preset_tabata_name">Tabata</string>
+    <string name="preset_tabata_description">Warm up + 20s work / 10s rest × 8</string>
+    <string name="preset_emom_name">EMOM</string>
+    <string name="preset_emom_description">Every minute on the minute</string>
+    <string name="preset_amrap_name">AMRAP</string>
+    <string name="preset_amrap_description">As many rounds as possible</string>
+    <string name="preset_intervals_name">Intervals</string>
+    <string name="preset_intervals_description">Work and rest cycles</string>
+    <string name="preset_custom_name">Custom</string>
+    <string name="preset_custom_description">Build your own timer</string>
+
+    <!-- Starter timers (seeded on first launch) -->
+    <string name="starter_tabata_name">Tabata</string>
+    <string name="starter_emom10_name">EMOM 10</string>
+    <string name="starter_hiit4515_name">45 / 15 HIIT</string>
+    <string name="starter_block_work">Work</string>
+    <string name="starter_block_rest">Rest</string>
+    <string name="starter_block_minute">Minute</string>
+    <string name="starter_block_warmup">Warm up</string>
+    <string name="starter_block_cooldown">Cool down</string>
+    <string name="starter_block_workout">Workout</string>
+
+    <!-- Donation message copy (cycled) -->
+    <string name="donation_positive">Throw me a coffee</string>
+    <string name="donation_negative">Not today</string>
+    <string name="donation_copy_01_title">No ads, no subs, no tracking.</string>
+    <string name="donation_copy_01_body">If that's the kind of thing you want more of on your phone, a few bucks helps me keep at it.</string>
+    <string name="donation_copy_02_title">I'm the only person making this.</string>
+    <string name="donation_copy_02_body">If this app has helped you, a coffee-sized tip would genuinely make my week.</string>
+    <string name="donation_copy_03_title">A donate popup in a HIIT app is tonally weird.</string>
+    <string name="donation_copy_03_body">I know. But this really is free, made by one guy, and there's really no other revenue. Help a stranger out?</string>
+    <string name="donation_copy_04_title">No pressure.</string>
+    <string name="donation_copy_04_body">If you hate this app, close this. If you like it, there's a button. If you're indifferent, also close this.</string>
+    <string name="donation_copy_05_title">Shoutout to you, genuinely.</string>
+    <string name="donation_copy_05_body">You picked this over every free timer on the store. If you want to make that pick feel even better, the tip jar is open.</string>
+    <string name="donation_copy_06_title">Pretend this is a high five.</string>
+    <string name="donation_copy_06_body">You finished a workout. I finished an app. If you feel like sealing the deal with a tip, I would not hate it.</string>
+    <string name="donation_copy_07_title">Honest pitch:</string>
+    <string name="donation_copy_07_body">I'd rather make this than almost anything else, but rent is still a thing. Tips help me keep picking this.</string>
+    <string name="donation_copy_08_title">Reminder that someone made this.</string>
+    <string name="donation_copy_08_body">Not a team. Not a company. Just a guy who wanted a HIIT timer that didn't suck. Buy him a coffee if you agree.</string>
+    <string name="donation_copy_09_title">Free forever is the plan.</string>
+    <string name="donation_copy_09_body">Tips are what keeps that plan viable. No guilt trip, just a heads up that the tip jar exists.</string>
+    <string name="donation_copy_10_title">You've done a few workouts in here now.</string>
+    <string name="donation_copy_10_body">If the app has earned a spot on your phone, maybe it's earned a couple bucks too.</string>
+    <string name="donation_copy_11_title">Tipping is optional.</string>
+    <string name="donation_copy_11_body">Everything else is too: no signup, no upsell, no nagging (well, except this one popup).</string>
+    <string name="donation_copy_12_title">I don't know how to do this gracefully.</string>
+    <string name="donation_copy_12_body">So I'll just say it: if you can spare a few bucks, it means a lot. If you can't, no sweat. Carry on.</string>
+    <string name="donation_copy_13_title">Small brag:</string>
+    <string name="donation_copy_13_body">This whole app was built by one person in their off hours. If that's the kind of thing you like supporting, now's the time.</string>
+    <string name="donation_copy_14_title">The tip jar is a real tip jar.</string>
+    <string name="donation_copy_14_body">Not a 'subscribe for features' trick. Pay nothing, pay something, same app either way.</string>
+    <string name="donation_copy_15_title">Sweaty hands, warm heart.</string>
+    <string name="donation_copy_15_body">You just finished a workout. While you're in a good mood, maybe consider tipping the dev. Maybe.</string>
+    <string name="donation_copy_16_title">Tips fund the next feature.</string>
+    <string name="donation_copy_16_body">And the one after that. And the bug fix I've been avoiding. All of it, honestly.</string>
+    <string name="donation_copy_17_title">Hey.</string>
+    <string name="donation_copy_17_body">If this app has been useful to you, a tip would be a genuinely nice thing to receive. Thanks for reading this far.</string>
+    <string name="donation_copy_18_title">Fair warning:</string>
+    <string name="donation_copy_18_body">Clicking 'not today' will not make me sad. Clicking the other one will make me extremely un-sad.</string>
+    <string name="donation_copy_19_title">This app has no investors.</string>
+    <string name="donation_copy_19_body">Which means no one is telling me to add ads, upsells, or a paywall. Tips keep it that way.</string>
+    <string name="donation_copy_20_title">You showed up today.</string>
+    <string name="donation_copy_20_body">Workouts are hard. Making an app is also kind of hard. If you want to reward the latter, the tip jar is open.</string>
+
+    <!-- Blocking error screen -->
+    <string name="blocking_error_error_code">Error code: %1$d</string>
+    <string name="blocking_error_report_button">Report to developers</string>
+    <string name="blocking_error_report_footnote">(which is me cause I wrote myself)</string>
+
+    <!-- Shake dialog -->
+    <string name="shake_dialog_headline">I felt that.</string>
+    <string name="shake_dialog_subtext">Something feel off? Let me know.</string>
+    <string name="shake_dialog_dismiss">Dismiss</string>
+    <string name="shake_dialog_dont_show_again">Don't show this again</string>
+    <string name="bug_report_context_shake">Triggered via shake</string>
+
+    <!-- Additional starter / example content not covered above -->
+    <string name="starter_block_high_intensity">High intensity</string>
+    <string name="starter_block_low_intensity">Low intensity</string>
+    <string name="starter_timer_classic_hiit">Classic HIIT</string>
+</resources>

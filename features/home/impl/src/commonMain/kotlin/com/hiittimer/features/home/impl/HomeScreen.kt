@@ -11,6 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.jetbrains.compose.resources.stringResource
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.home_welcome
+import rounds.libraries.resources.generated.resources.home_greeting
+import rounds.libraries.resources.generated.resources.home_empty_subtitle
+import rounds.libraries.resources.generated.resources.home_send_feedback
+import rounds.libraries.resources.generated.resources.home_report_bug
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
 import com.dangerfield.hiittimer.libraries.ui.components.button.Button
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
@@ -37,7 +44,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = "Welcome to HIIT Timer",
+                text = stringResource(AppRes.string.home_welcome),
                 typography = AppTheme.typography.Heading.H700,
                 color = AppTheme.colors.text,
                 textAlign = TextAlign.Center,
@@ -45,9 +52,9 @@ fun HomeScreen(
 
             VerticalSpacerD800()
 
-            if (state.userName != null) {
+            state.userName?.let { userName ->
                 Text(
-                    text = "Hello, ${state.userName}!",
+                    text = stringResource(AppRes.string.home_greeting, userName),
                     typography = AppTheme.typography.Body.B600,
                     color = AppTheme.colors.textSecondary,
                 )
@@ -55,7 +62,7 @@ fun HomeScreen(
             }
 
             Text(
-                text = "This is your starting point.\nBuild something amazing!",
+                text = stringResource(AppRes.string.home_empty_subtitle),
                 typography = AppTheme.typography.Body.B500,
                 color = AppTheme.colors.textSecondary,
                 textAlign = TextAlign.Center,
@@ -64,13 +71,13 @@ fun HomeScreen(
             VerticalSpacerD800()
 
             Button(onClick = onNavigateToFeedback) {
-                Text("Send Feedback")
+                Text(stringResource(AppRes.string.home_send_feedback))
             }
 
             VerticalSpacerD500()
 
             Button(onClick = onNavigateToBugReport) {
-                Text("Report a Bug")
+                Text(stringResource(AppRes.string.home_report_bug))
             }
         }
     }

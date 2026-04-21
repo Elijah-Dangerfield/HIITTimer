@@ -2,20 +2,24 @@ package com.dangerfield.hiittimer.features.timers.impl.runner
 
 import androidx.lifecycle.viewModelScope
 import com.dangerfield.hiittimer.features.timers.CompletedWorkoutsPref
+import com.dangerfield.hiittimer.features.timers.CueRole
 import com.dangerfield.hiittimer.features.timers.CueVolumePref
 import com.dangerfield.hiittimer.features.timers.HalfwayCalloutsPref
 import com.dangerfield.hiittimer.features.timers.HapticsEnabledPref
+import com.dangerfield.hiittimer.features.timers.HasSeenRunnerVolumeTooltipPref
 import com.dangerfield.hiittimer.features.timers.ShowProgressBarPref
 import com.dangerfield.hiittimer.features.timers.SoundMode
-import com.dangerfield.hiittimer.features.timers.SoundModePref
 import com.dangerfield.hiittimer.features.timers.SoundPack
-import com.dangerfield.hiittimer.features.timers.SoundPackPref
+import com.dangerfield.hiittimer.features.timers.SoundsEnabledPref
+import com.dangerfield.hiittimer.features.timers.VoiceIdPref
 import com.dangerfield.hiittimer.features.timers.Timer
 import com.dangerfield.hiittimer.features.timers.impl.TimerRepository
 import com.dangerfield.hiittimer.features.timers.impl.audio.AudioCuePlayer
 import com.dangerfield.hiittimer.features.timers.impl.audio.AudioCuePlayerFactory
 import com.dangerfield.hiittimer.features.timers.impl.haptics.HapticsCuePlayer
 import com.dangerfield.hiittimer.features.timers.impl.haptics.HapticsCuePlayerFactory
+import com.dangerfield.hiittimer.features.timers.modePref
+import com.dangerfield.hiittimer.features.timers.pref
 import com.dangerfield.hiittimer.libraries.flowroutines.SEAViewModel
 import com.dangerfield.hiittimer.libraries.inappmessages.InAppMessageCoordinator
 import com.dangerfield.hiittimer.libraries.inappmessages.InAppMessageTrigger
@@ -54,14 +58,20 @@ class RunnerViewModel(
             RunnerAction.Skip -> engine?.skip()
             RunnerAction.ResetBlock -> engine?.resetCurrentBlock()
             RunnerAction.ToggleSound -> {
-                val next = when (state.soundMode) {
-                    SoundMode.Off -> SoundMode.Beeps
-                    SoundMode.Beeps -> SoundMode.Voice
-                    SoundMode.Voice -> SoundMode.Off
-                }
-                preferences.set(SoundModePref, next.name)
-                audio?.setMode(next)
-                action.updateState { it.copy(soundMode = next) }
+                val next = !state.soundsEnabled
+                preferences.set(SoundsEnabledPref, next)
+                audio?.setMasterEnabled(next)
+                action.updateState { it.copy(soundsEnabled = next) }
+            }
+            is RunnerAction.SetCueVolume -> {
+                val clamped = action.volume.coerceIn(0f, 1f)
+                preferences.set(CueVolumePref, clamped)
+                audio?.setVolume(clamped)
+                action.updateState { it.copy(cueVolume = clamped) }
+            }
+            RunnerAction.DismissVolumeTooltip -> {
+                preferences.set(HasSeenRunnerVolumeTooltipPref, true)
+                action.updateState { it.copy(showVolumeTooltip = false) }
             }
             RunnerAction.Stop -> {
                 engine?.stop()
@@ -82,21 +92,31 @@ class RunnerViewModel(
         }
         val showProgress = preferences.get(ShowProgressBarPref)
         val halfway = preferences.get(HalfwayCalloutsPref)
-        val soundMode = runCatching { SoundMode.valueOf(preferences.get(SoundModePref)) }
-            .getOrDefault(SoundMode.Beeps)
-        val soundPack = runCatching { SoundPack.valueOf(preferences.get(SoundPackPref)) }
-            .getOrDefault(SoundPack.Classic)
+        val soundsEnabled = preferences.get(SoundsEnabledPref)
+        val cueModes: Map<CueRole, SoundMode> = CueRole.entries.associateWith { role ->
+            runCatching { SoundMode.valueOf(preferences.get(role.modePref())) }
+                .getOrDefault(SoundMode.Beeps)
+        }
+        val cuePacks: Map<CueRole, SoundPack> = CueRole.entries.associateWith { role ->
+            runCatching { SoundPack.valueOf(preferences.get(role.pref())) }
+                .getOrDefault(SoundPack.Classic)
+        }
         val cueVolume = preferences.get(CueVolumePref)
+        val voiceId = preferences.get(VoiceIdPref)
         val hapticsEnabled = preferences.get(HapticsEnabledPref)
+        val hasSeenVolumeTooltip = preferences.get(HasSeenRunnerVolumeTooltipPref)
         updateState {
             it.copy(
                 timer = timer,
                 showProgressBar = showProgress,
                 halfwayEnabled = halfway,
-                soundMode = soundMode,
-                soundPack = soundPack,
+                soundsEnabled = soundsEnabled,
+                cueModes = cueModes,
+                cuePacks = cuePacks,
                 cueVolume = cueVolume,
+                voiceId = voiceId,
                 hapticsEnabled = hapticsEnabled,
+                showVolumeTooltip = !hasSeenVolumeTooltip,
             )
         }
         takeAction(RunnerAction.Start)
@@ -106,8 +126,10 @@ class RunnerViewModel(
         val timer = state.timer ?: return
         val e = RunnerEngine(timer).also { engine = it }
         val player = audioFactory.create().also { audio = it }
-        player.setMode(state.soundMode)
-        player.setSoundPack(state.soundPack)
+        player.setMasterEnabled(state.soundsEnabled)
+        state.cueModes.forEach { (role, mode) -> player.setMode(role, mode) }
+        state.cuePacks.forEach { (role, pack) -> player.setCuePack(role, pack) }
+        player.setVoice(state.voiceId)
         player.setVolume(state.cueVolume)
 
         val hapticsPlayer = hapticsFactory.create().also { haptics = it }
@@ -132,7 +154,7 @@ class RunnerViewModel(
         viewModelScope.launch {
             e.cues.collect { cue ->
                 if (cue is RunnerCue.Halfway && !state.halfwayEnabled) return@collect
-                if (state.soundMode != SoundMode.Off) player.play(cue)
+                if (state.soundsEnabled) player.play(cue)
                 if (state.hapticsEnabled) hapticsPlayer.play(cue)
             }
         }
@@ -159,10 +181,13 @@ data class RunnerUiState(
     val engineState: RunnerState = RunnerState.Idle,
     val showProgressBar: Boolean = true,
     val halfwayEnabled: Boolean = false,
-    val soundMode: SoundMode = SoundMode.Beeps,
-    val soundPack: SoundPack = SoundPack.Classic,
+    val soundsEnabled: Boolean = true,
+    val cueModes: Map<CueRole, SoundMode> = CueRole.entries.associateWith { SoundMode.Beeps },
+    val cuePacks: Map<CueRole, SoundPack> = CueRole.entries.associateWith { SoundPack.Classic },
     val cueVolume: Float = 0.8f,
+    val voiceId: String = "",
     val hapticsEnabled: Boolean = true,
+    val showVolumeTooltip: Boolean = false,
 )
 
 sealed interface RunnerEvent {
@@ -177,5 +202,7 @@ sealed interface RunnerAction {
     data object Skip : RunnerAction
     data object ResetBlock : RunnerAction
     data object ToggleSound : RunnerAction
+    data class SetCueVolume(val volume: Float) : RunnerAction
+    data object DismissVolumeTooltip : RunnerAction
     data object Stop : RunnerAction
 }

@@ -1,0 +1,140 @@
+name: Rollout guard
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to monitor (e.g. v1.2.3)'
+        required: true
+        type: string
+      build_number:
+        description: 'Build number (for Sentry release match)'
+        required: true
+        type: string
+      duration_hours:
+        description: 'How long to monitor (hours). Default 48.'
+        required: false
+        default: '48'
+        type: string
+      min_crash_free_sessions:
+        description: 'Minimum crash-free session rate (0-1). Default 0.995.'
+        required: false
+        default: '0.995'
+        type: string
+  schedule:
+    - cron: '*/30 * * * *'
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+jobs:
+  guard:
+    name: Monitor Sentry crash rate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine release under watch
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+            BUILD="${{ inputs.build_number }}"
+          else
+            LATEST=$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)
+            if [ -z "$LATEST" ]; then
+              echo "no-release=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            TAG="$LATEST"
+            BUILD=""
+          fi
+          VERSION="${TAG#v}"
+          if [ -n "$BUILD" ]; then
+            SENTRY_RELEASE_QUERY="hiittimer@${VERSION}+${BUILD}"
+          else
+            # Cron path has no build number — match any build for this version.
+            SENTRY_RELEASE_QUERY="hiittimer@${VERSION}*"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sentry_release=$SENTRY_RELEASE_QUERY" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip when no release yet
+        if: steps.release.outputs.no-release == 'true'
+        run: echo "No releases to monitor — exiting."
+
+      - name: Query Sentry sessions
+        if: steps.release.outputs.no-release != 'true' && env.SENTRY_AUTH_TOKEN != ''
+        id: sessions
+        run: |
+          set -euo pipefail
+          THRESHOLD="${{ inputs.min_crash_free_sessions || '0.995' }}"
+          RELEASE="${{ steps.release.outputs.sentry_release }}"
+          ORG="$SENTRY_ORG"
+          PROJECT="$SENTRY_PROJECT"
+
+          RESP=$(curl -sSL \
+            -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+            "https://sentry.io/api/0/organizations/${ORG}/sessions/?project=${PROJECT}&field=crash_free_rate%28session%29&statsPeriod=24h&environment=production&query=release:${RELEASE}")
+
+          RATE=$(echo "$RESP" | jq -r '.groups[0].totals["crash_free_rate(session)"] // empty')
+          if [ -z "$RATE" ]; then
+            echo "::warning::No session data yet for release $RELEASE"
+            echo "healthy=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Crash-free rate: $RATE (threshold: $THRESHOLD)"
+          HEALTHY=$(awk -v r="$RATE" -v t="$THRESHOLD" 'BEGIN { print (r+0 >= t+0) ? "true" : "false" }')
+          echo "rate=$RATE" >> "$GITHUB_OUTPUT"
+          echo "threshold=$THRESHOLD" >> "$GITHUB_OUTPUT"
+          echo "healthy=$HEALTHY" >> "$GITHUB_OUTPUT"
+
+      - name: Halt phased release if unhealthy
+        if: steps.sessions.outputs.healthy == 'false'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          echo "::warning::Crash-free rate ${{ steps.sessions.outputs.rate }} is below threshold ${{ steps.sessions.outputs.threshold }} — halting phased rollout"
+          # Halts App Store phased release via ASC API.
+          # Delegated to a helper script so it can be tested independently.
+          bash scripts/halt_asc_phased_release.sh \
+            "${{ steps.release.outputs.version }}" || \
+            echo "::warning::Halt script failed — manual intervention may be required"
+
+      - name: Open P0 issue on regression
+        if: steps.sessions.outputs.healthy == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "🚨 Rollout regression: ${{ steps.release.outputs.tag }} crash-free ${{ steps.sessions.outputs.rate }}" \
+            --body "Release **${{ steps.release.outputs.sentry_release }}** is below the crash-free-session threshold.
+
+          - Observed: ${{ steps.sessions.outputs.rate }}
+          - Threshold: ${{ steps.sessions.outputs.threshold }}
+          - App Store phased release has been halted.
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          This issue was opened automatically. The next Sentry-triage run will pick it up." \
+            --label "rollout-regression,P0,ai-autofix"
+
+      - name: Notify healthy
+        if: steps.sessions.outputs.healthy == 'true'
+        run: echo "✅ Release ${{ steps.release.outputs.tag }} healthy (${{ steps.sessions.outputs.rate }} crash-free sessions)"

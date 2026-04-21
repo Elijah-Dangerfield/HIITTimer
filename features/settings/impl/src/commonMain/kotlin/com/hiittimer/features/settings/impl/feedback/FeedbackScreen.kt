@@ -29,6 +29,15 @@ import com.dangerfield.hiittimer.libraries.ui.components.text.OutlinedTextField
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.libraries.ui.screenContentPadding
 import androidx.compose.ui.tooling.preview.Preview
+import org.jetbrains.compose.resources.stringResource
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.char_counter
+import rounds.libraries.resources.generated.resources.common_describe_placeholder
+import rounds.libraries.resources.generated.resources.common_message_label
+import rounds.libraries.resources.generated.resources.common_send
+import rounds.libraries.resources.generated.resources.common_sending
+import rounds.libraries.resources.generated.resources.feedback_subtitle
+import rounds.libraries.resources.generated.resources.feedback_title
 
 private const val FEEDBACK_CHAR_LIMIT = 200
 
@@ -45,7 +54,7 @@ fun FeedbackScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopBar(
-                 title = "Share Your Feedback",
+                title = stringResource(AppRes.string.feedback_title),
                 onNavigateBack = { onAction(FeedbackAction.Back) }
             )
         }
@@ -63,7 +72,7 @@ fun FeedbackScreen(
             VerticalSpacerD1000()
 
             Text(
-                text = "We'd love to hear from you",
+                text = stringResource(AppRes.string.feedback_subtitle),
                 typography = AppTheme.typography.Body.B700,
                 color = AppTheme.colors.textSecondary
             )
@@ -79,8 +88,8 @@ fun FeedbackScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(Dimension.D1900),
-                label = { Text("Message") },
-                placeholder = { Text("Describe what happened…") },
+                label = { Text(stringResource(AppRes.string.common_message_label)) },
+                placeholder = { Text(stringResource(AppRes.string.common_describe_placeholder)) },
                 singleLine = false,
                 minLines = 6,
                 maxLines = 10,
@@ -110,7 +119,7 @@ fun FeedbackScreen(
                 }
 
                 Text(
-                    text = "$messageLength/$FEEDBACK_CHAR_LIMIT",
+                    text = stringResource(AppRes.string.char_counter, messageLength, FEEDBACK_CHAR_LIMIT),
                     color = counterColor,
                     typography = AppTheme.typography.Body.B500
                 )
@@ -138,7 +147,7 @@ fun FeedbackScreen(
                     }
                 }
             ) {
-                Text(if (state.isSubmitting) "Sending…" else "Send")
+                Text(if (state.isSubmitting) stringResource(AppRes.string.common_sending) else stringResource(AppRes.string.common_send))
             }
 
             VerticalSpacerD500()

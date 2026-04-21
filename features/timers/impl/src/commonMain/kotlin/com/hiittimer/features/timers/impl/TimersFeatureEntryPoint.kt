@@ -8,12 +8,15 @@ import com.dangerfield.hiittimer.features.timers.BlockEditRoute
 import com.dangerfield.hiittimer.features.timers.RunnerRoute
 import com.dangerfield.hiittimer.features.timers.TimerDetailRoute
 import com.dangerfield.hiittimer.features.timers.TimerListRoute
+import com.dangerfield.hiittimer.features.timers.TimerPresetRoute
 import com.dangerfield.hiittimer.features.timers.impl.blockedit.BlockEditScreen
 import com.dangerfield.hiittimer.features.timers.impl.blockedit.BlockEditViewModel
 import com.dangerfield.hiittimer.features.timers.impl.detail.TimerDetailScreen
 import com.dangerfield.hiittimer.features.timers.impl.detail.TimerDetailViewModel
 import com.dangerfield.hiittimer.features.timers.impl.list.TimerListScreen
 import com.dangerfield.hiittimer.features.timers.impl.list.TimerListViewModel
+import com.dangerfield.hiittimer.features.timers.impl.preset.TimerPresetScreen
+import com.dangerfield.hiittimer.features.timers.impl.preset.TimerPresetViewModel
 import com.dangerfield.hiittimer.features.timers.impl.runner.RunnerScreen
 import com.dangerfield.hiittimer.features.timers.impl.runner.RunnerViewModel
 import com.dangerfield.hiittimer.libraries.navigation.FeatureEntryPoint
@@ -29,6 +32,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @Inject
 class TimersFeatureEntryPoint(
     private val listViewModelFactory: () -> TimerListViewModel,
+    private val presetViewModelFactory: () -> TimerPresetViewModel,
     private val detailViewModelFactory: (timerId: String) -> TimerDetailViewModel,
     private val blockEditViewModelFactory: (timerId: String, blockId: String) -> BlockEditViewModel,
     private val runnerViewModelFactory: (timerId: String) -> RunnerViewModel,
@@ -42,6 +46,19 @@ class TimersFeatureEntryPoint(
                 onOpenDetail = { id, isNew -> router.navigate(TimerDetailRoute(timerId = id, isNew = isNew)) },
                 onStart = { router.navigate(RunnerRoute(timerId = it)) },
                 onOpenSettings = { router.navigate(SettingsRoute()) },
+                onCreateNew = { router.navigate(TimerPresetRoute) },
+            )
+        }
+
+        screen<TimerPresetRoute> {
+            val vm: TimerPresetViewModel = viewModel { presetViewModelFactory() }
+            TimerPresetScreen(
+                viewModel = vm,
+                onOpenTimer = {
+                    router.popBackTo(TimerPresetRoute, inclusive = true)
+                    router.navigate(TimerDetailRoute(timerId = it, isNew = true))
+                },
+                onBack = { router.goBack() },
             )
         }
 

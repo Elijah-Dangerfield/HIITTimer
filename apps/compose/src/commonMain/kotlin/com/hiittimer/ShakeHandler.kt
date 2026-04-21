@@ -1,12 +1,11 @@
 package com.dangerfield.hiittimer
 
+import com.dangerfield.hiittimer.features.settings.ShakeToReportEnabledPref
 import com.dangerfield.hiittimer.libraries.core.ShakeDetector
-import com.dangerfield.hiittimer.libraries.core.ShakeEvent
-import com.dangerfield.hiittimer.libraries.core.ShakeMessageContext
-import com.dangerfield.hiittimer.libraries.core.ShakeMessageProvider
 import com.dangerfield.hiittimer.libraries.hiittimer.UserRepository
 import com.dangerfield.hiittimer.libraries.navigation.Router
 import com.dangerfield.hiittimer.libraries.navigation.ShakeDialogRoute
+import com.dangerfield.hiittimer.libraries.preferences.Preferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,53 +18,40 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @SingleIn(AppScope::class)
 class ShakeHandler(
     private val shakeDetector: ShakeDetector,
-    private val shakeMessageProvider: ShakeMessageProvider,
     private val userRepository: UserRepository,
     private val router: Router,
+    private val preferences: Preferences,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    @Volatile
     private var isShowingDialog = false
-    
+
     fun start() {
         shakeDetector.start()
         scope.launch {
-            shakeDetector.shakeEvents.collect { event ->
-                handleShake(event)
+            shakeDetector.shakeEvents.collect {
+                handleShake()
             }
         }
     }
-    
+
     fun stop() {
         shakeDetector.stop()
     }
-    
+
+    /** Called by the dialog entry point on every close path (dismiss, report-bug, don't-show-again)
+     *  so the next shake can surface the dialog again. Without this, the detector would appear
+     *  to fire only once per app session. */
     fun onDialogDismissed() {
         isShowingDialog = false
     }
-    
-    private suspend fun handleShake(event: ShakeEvent) {
+
+    private suspend fun handleShake() {
         if (isShowingDialog) return
-        
-        val user = userRepository.getUser() ?: return
-        
-        val context = ShakeMessageContext(
-            shakeCount = user.shakeCount,
-            intensity = event.intensity,
-            isLateNight = false,
-            isFirstSession = user.sessionsCount <= 1,
-            userName = user.name,
-        )
-        
-        val message = shakeMessageProvider.getMessage(context)
-        
+        if (!preferences.get(ShakeToReportEnabledPref)) return
         isShowingDialog = true
-        router.navigate(
-            ShakeDialogRoute(
-                headline = message.headline,
-                subtext = message.subtext,
-            )
-        )
-        
+        router.navigate(ShakeDialogRoute())
         userRepository.onShakeDetected()
     }
 }

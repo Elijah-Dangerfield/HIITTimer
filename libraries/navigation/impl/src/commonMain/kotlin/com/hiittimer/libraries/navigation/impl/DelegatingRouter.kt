@@ -19,12 +19,10 @@ import com.dangerfield.hiittimer.libraries.flowroutines.AppCoroutineScope
 import com.dangerfield.hiittimer.libraries.flowroutines.observeWithLifecycle
 import com.dangerfield.hiittimer.libraries.navigation.BlockingErrorRoute
 import com.dangerfield.hiittimer.libraries.navigation.NavigationOptions
-import com.dangerfield.hiittimer.libraries.navigation.NavigationTracker
 import com.dangerfield.hiittimer.libraries.navigation.Route
 import com.dangerfield.hiittimer.libraries.navigation.Router
 import com.dangerfield.hiittimer.libraries.navigation.WebLinkLauncher
 import com.dangerfield.hiittimer.libraries.navigation.NavigableWhileBlocked
-import com.dangerfield.hiittimer.libraries.navigation.TrackableRoute
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -47,7 +45,6 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class DelegatingRouter(
     private val appScope: AppCoroutineScope,
     private val webLinkLauncher: WebLinkLauncher,
-    private val navigationTracker: NavigationTracker,
 ) : Router {
 
     private val logger = KLog.withTag("DelegatingRouter")
@@ -88,11 +85,6 @@ class DelegatingRouter(
     }
 
     override fun navigate(route: Route, options: NavigationOptions) {
-        // Track the navigation if the route is trackable
-        if (route is TrackableRoute) {
-            appScope.launch { navigationTracker.onNavigate(route) }
-        }
-        
         enqueueNavigation(
             description = "navigate to ${route.nameForLogs()}",
             route = route,

@@ -4,7 +4,10 @@ import com.dangerfield.hiittimer.libraries.navigation.Route
 import kotlinx.serialization.Serializable
 
 @Serializable
-class TimerListRoute : Route()
+data object TimerListRoute : Route()
+
+@Serializable
+data object TimerPresetRoute : Route()
 
 @Serializable
 data class TimerDetailRoute(val timerId: String, val isNew: Boolean = false) : Route()

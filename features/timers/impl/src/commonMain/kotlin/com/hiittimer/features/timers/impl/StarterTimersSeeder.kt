@@ -7,9 +7,20 @@ import com.dangerfield.hiittimer.libraries.flowroutines.AppCoroutineScope
 import com.dangerfield.hiittimer.libraries.hiittimer.AppCache
 import com.dangerfield.hiittimer.libraries.hiittimer.AppEvent
 import com.dangerfield.hiittimer.libraries.hiittimer.AppEventListener
+import com.dangerfield.hiittimer.system.color.defaultRunnerColors
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
+import org.jetbrains.compose.resources.getString
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.starter_block_cooldown
+import rounds.libraries.resources.generated.resources.starter_block_minute
+import rounds.libraries.resources.generated.resources.starter_block_rest
+import rounds.libraries.resources.generated.resources.starter_block_warmup
+import rounds.libraries.resources.generated.resources.starter_block_work
+import rounds.libraries.resources.generated.resources.starter_emom10_name
+import rounds.libraries.resources.generated.resources.starter_hiit4515_name
+import rounds.libraries.resources.generated.resources.starter_tabata_name
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
@@ -38,14 +49,15 @@ class StarterTimersSeeder(
             if (data.hasCheckedStarterTimers) return@launch
             val existing = repository.observeAll().first()
             if (existing.isEmpty()) {
-                starterTimers().forEach { preset ->
+                val timers = starterTimers()
+                timers.forEach { preset ->
                     repository.createWithBlocks(
                         name = preset.name,
                         cycleCount = preset.cycleCount,
                         blocks = preset.blocks,
                     )
                 }
-                logger.i("Seeded ${starterTimers().size} starter timers")
+                logger.i("Seeded ${timers.size} starter timers")
             }
             appCache.update { it.copy(hasCheckedStarterTimers = true) }
         }
@@ -58,36 +70,36 @@ private data class StarterTimer(
     val blocks: List<Block>,
 )
 
-private fun starterTimers(): List<StarterTimer> = listOf(
+private suspend fun starterTimers(): List<StarterTimer> = listOf(
     tabata(),
     emom10(),
     hiit4515(),
 )
 
-private fun tabata(): StarterTimer = StarterTimer(
-    name = "Tabata",
+private suspend fun tabata(): StarterTimer = StarterTimer(
+    name = getString(AppRes.string.starter_tabata_name),
     cycleCount = 8,
     blocks = listOf(
-        Block(Uuid.random().toString(), "Work", 20.seconds, ColorPalette.defaultWorkArgb, BlockRole.Cycle),
-        Block(Uuid.random().toString(), "Rest", 10.seconds, ColorPalette.defaultRestArgb, BlockRole.Cycle),
+        Block(Uuid.random().toString(), getString(AppRes.string.starter_block_work), 20.seconds, defaultRunnerColors.defaultWorkArgb, BlockRole.Cycle),
+        Block(Uuid.random().toString(), getString(AppRes.string.starter_block_rest), 10.seconds, defaultRunnerColors.defaultRestArgb, BlockRole.Cycle),
     ),
 )
 
-private fun emom10(): StarterTimer = StarterTimer(
-    name = "EMOM 10",
+private suspend fun emom10(): StarterTimer = StarterTimer(
+    name = getString(AppRes.string.starter_emom10_name),
     cycleCount = 10,
     blocks = listOf(
-        Block(Uuid.random().toString(), "Minute", 60.seconds, ColorPalette.defaultWorkArgb, BlockRole.Cycle),
+        Block(Uuid.random().toString(), getString(AppRes.string.starter_block_minute), 60.seconds, defaultRunnerColors.defaultWorkArgb, BlockRole.Cycle),
     ),
 )
 
-private fun hiit4515(): StarterTimer = StarterTimer(
-    name = "45 / 15 HIIT",
+private suspend fun hiit4515(): StarterTimer = StarterTimer(
+    name = getString(AppRes.string.starter_hiit4515_name),
     cycleCount = 8,
     blocks = listOf(
-        Block(Uuid.random().toString(), "Warm up", 120.seconds, ColorPalette.warmupArgb, BlockRole.Warmup),
-        Block(Uuid.random().toString(), "Work", 45.seconds, ColorPalette.defaultWorkArgb, BlockRole.Cycle),
-        Block(Uuid.random().toString(), "Rest", 15.seconds, ColorPalette.defaultRestArgb, BlockRole.Cycle),
-        Block(Uuid.random().toString(), "Cool down", 120.seconds, ColorPalette.lowIntensityArgb, BlockRole.Cooldown),
+        Block(Uuid.random().toString(), getString(AppRes.string.starter_block_warmup), 120.seconds, defaultRunnerColors.warmupArgb, BlockRole.Warmup),
+        Block(Uuid.random().toString(), getString(AppRes.string.starter_block_work), 45.seconds, defaultRunnerColors.defaultWorkArgb, BlockRole.Cycle),
+        Block(Uuid.random().toString(), getString(AppRes.string.starter_block_rest), 15.seconds, defaultRunnerColors.defaultRestArgb, BlockRole.Cycle),
+        Block(Uuid.random().toString(), getString(AppRes.string.starter_block_cooldown), 120.seconds, defaultRunnerColors.lowIntensityArgb, BlockRole.Cooldown),
     ),
 )

@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,18 +45,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dangerfield.hiittimer.libraries.flowroutines.ObserveEvents
 import com.dangerfield.hiittimer.features.timers.Block
 import com.dangerfield.hiittimer.features.timers.BlockRole
-import com.dangerfield.hiittimer.features.timers.impl.ColorPalette
 import com.dangerfield.hiittimer.libraries.ui.PreviewContent
+import com.dangerfield.hiittimer.system.color.defaultRunnerColors
 import androidx.compose.ui.tooling.preview.Preview
 import kotlin.time.Duration.Companion.seconds
 import com.dangerfield.hiittimer.libraries.ui.components.checkbox.Checkbox
 import com.dangerfield.hiittimer.libraries.ui.components.Screen
-import com.dangerfield.hiittimer.libraries.ui.components.Surface
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonDanger
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonGhost
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonPrimary
-import com.dangerfield.hiittimer.libraries.ui.components.dialog.Dialog
-import com.dangerfield.hiittimer.libraries.ui.components.dialog.rememberDialogState
+import com.dangerfield.hiittimer.libraries.ui.components.dialog.BasicDialog
 import com.dangerfield.hiittimer.libraries.ui.components.dialog.bottomsheet.BottomSheet
 import com.dangerfield.hiittimer.libraries.ui.components.dialog.bottomsheet.rememberBottomSheetState
 import com.dangerfield.hiittimer.libraries.ui.components.icon.CircleIcon
@@ -67,6 +66,22 @@ import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.libraries.ui.system.color.ColorResource
 import com.dangerfield.hiittimer.system.AppTheme
 import com.dangerfield.hiittimer.system.Dimension
+import org.jetbrains.compose.resources.stringResource
+import rounds.libraries.resources.generated.resources.Res as AppRes
+import rounds.libraries.resources.generated.resources.action_delete
+import rounds.libraries.resources.generated.resources.action_dont_ask_again
+import rounds.libraries.resources.generated.resources.action_save
+import rounds.libraries.resources.generated.resources.block_edit_color_picker_title
+import rounds.libraries.resources.generated.resources.block_edit_label_min
+import rounds.libraries.resources.generated.resources.block_edit_label_sec
+import rounds.libraries.resources.generated.resources.block_edit_rename_title
+import rounds.libraries.resources.generated.resources.cd_back
+import rounds.libraries.resources.generated.resources.cd_delete_block
+import rounds.libraries.resources.generated.resources.cd_edit_name
+import rounds.libraries.resources.generated.resources.common_cancel
+import rounds.libraries.resources.generated.resources.common_untitled
+import rounds.libraries.resources.generated.resources.timer_detail_delete_block_body
+import rounds.libraries.resources.generated.resources.timer_detail_delete_block_title
 
 @Composable
 fun BlockEditScreen(
@@ -115,7 +130,7 @@ private fun BlockEditContent(
     val block = state.block ?: return
     val blockColor = remember(block.colorArgb) { Color(block.colorArgb) }
     val onBlockResource = remember(block.colorArgb) {
-        ColorResource.FromColor(ColorPalette.onColorFor(block.colorArgb), "on-block")
+        ColorResource.FromColor(defaultRunnerColors.onColorFor(block.colorArgb), "on-block")
     }
 
     Screen(
@@ -211,7 +226,7 @@ private fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CircleIcon(
-            icon = Icons.ArrowBack("Back"),
+            icon = Icons.ArrowBack(stringResource(AppRes.string.cd_back)),
             iconSize = IconSize.Medium,
             padding = Dimension.D300,
             backgroundColor = onColor.withAlpha(0.14f),
@@ -226,7 +241,7 @@ private fun TopBar(
         )
         Spacer(modifier = Modifier.size(Dimension.D300))
         CircleIcon(
-            icon = Icons.Delete("Delete block"),
+            icon = Icons.Delete(stringResource(AppRes.string.cd_delete_block)),
             iconSize = IconSize.Medium,
             padding = Dimension.D300,
             backgroundColor = onColor.withAlpha(0.14f),
@@ -268,14 +283,14 @@ private fun NameRow(name: String, onColor: ColorResource, onEdit: () -> Unit) {
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = name.ifBlank { "Untitled" },
+            text = name.ifBlank { stringResource(AppRes.string.common_untitled) },
             typography = AppTheme.typography.Heading.H800,
             color = onColor,
             maxLines = 1,
         )
         Spacer(modifier = Modifier.size(Dimension.D400))
         com.dangerfield.hiittimer.libraries.ui.components.icon.Icon(
-            icon = Icons.Pencil("Edit name"),
+            icon = Icons.Pencil(stringResource(AppRes.string.cd_edit_name)),
             size = IconSize.Small,
             color = onColor.withAlpha(0.75f),
         )
@@ -297,7 +312,7 @@ private fun DurationWheels(
         horizontalArrangement = Arrangement.spacedBy(Dimension.D500),
     ) {
         WheelColumn(
-            label = "MIN",
+            label = stringResource(AppRes.string.block_edit_label_min),
             range = 0..59,
             value = currentMinutes,
             onValueChange = { minutes ->
@@ -308,7 +323,7 @@ private fun DurationWheels(
             modifier = Modifier.weight(1f),
         )
         WheelColumn(
-            label = "SEC",
+            label = stringResource(AppRes.string.block_edit_label_sec),
             range = 0..59,
             value = currentSecs,
             onValueChange = { secs ->
@@ -439,7 +454,7 @@ private fun ColorPickerSheet(
                 .padding(Dimension.D700),
         ) {
             Text(
-                text = "Color",
+                text = stringResource(AppRes.string.block_edit_color_picker_title),
                 typography = AppTheme.typography.Heading.H700,
             )
             Spacer(modifier = Modifier.height(Dimension.D600))
@@ -447,14 +462,14 @@ private fun ColorPickerSheet(
                 horizontalArrangement = Arrangement.spacedBy(Dimension.D500),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                items(ColorPalette.swatches) { swatch ->
-                    val argb = swatch.toInt()
+                items(defaultRunnerColors.swatches) { swatch ->
+                    val argb = swatch.toArgb()
                     val selected = selectedArgb == argb
                     Box(
                         modifier = Modifier
                             .size(if (selected) 52.dp else 44.dp)
                             .clip(CircleShape)
-                            .background(Color(argb))
+                            .background(swatch)
                             .border(
                                 width = if (selected) 3.dp else 0.dp,
                                 color = AppTheme.colors.text.color,
@@ -478,48 +493,43 @@ private fun RenameDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val dialogState = rememberDialogState()
     var draft by remember { mutableStateOf(initial) }
-    Dialog(state = dialogState, onDismissRequest = onDismiss) {
-        Surface(
-            color = AppTheme.colors.surfacePrimary,
-            contentColor = AppTheme.colors.onSurfacePrimary,
-            radius = com.dangerfield.hiittimer.system.Radii.Card,
-            contentPadding = PaddingValues(Dimension.D700),
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Rename block",
-                    typography = AppTheme.typography.Heading.H700,
-                )
-                Spacer(modifier = Modifier.height(Dimension.D500))
-                OutlinedTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        capitalization = KeyboardCapitalization.Words,
-                    ),
-                )
-                Spacer(modifier = Modifier.height(Dimension.D700))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
+    BasicDialog(
+        onDismissRequest = onDismiss,
+        topContent = {
+            Text(
+                text = stringResource(AppRes.string.block_edit_rename_title),
+                typography = AppTheme.typography.Heading.H700,
+            )
+        },
+        content = {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    capitalization = KeyboardCapitalization.Words,
+                ),
+            )
+        },
+        bottomContent = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
+            ) {
+                ButtonGhost(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(AppRes.string.common_cancel))
+                }
+                ButtonPrimary(
+                    onClick = { onConfirm(draft.trim()) },
+                    modifier = Modifier.weight(1f),
                 ) {
-                    ButtonGhost(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                        Text("Cancel")
-                    }
-                    ButtonPrimary(
-                        onClick = { onConfirm(draft.trim()) },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text("Save")
-                    }
+                    Text(stringResource(AppRes.string.action_save))
                 }
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -529,26 +539,22 @@ private fun DeleteConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val dialogState = rememberDialogState()
-    Dialog(state = dialogState, onDismissRequest = onDismiss) {
-        Surface(
-            color = AppTheme.colors.surfacePrimary,
-            contentColor = AppTheme.colors.onSurfacePrimary,
-            radius = com.dangerfield.hiittimer.system.Radii.Card,
-            contentPadding = PaddingValues(Dimension.D700),
-        ) {
+    BasicDialog(
+        onDismissRequest = onDismiss,
+        topContent = {
+            Text(
+                text = stringResource(AppRes.string.timer_detail_delete_block_title),
+                typography = AppTheme.typography.Heading.H700,
+            )
+        },
+        content = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Delete this block?",
-                    typography = AppTheme.typography.Heading.H700,
-                )
-                Spacer(modifier = Modifier.height(Dimension.D400))
-                Text(
-                    text = "You can't undo this.",
+                    text = stringResource(AppRes.string.timer_detail_delete_block_body),
                     typography = AppTheme.typography.Body.B500,
                     color = AppTheme.colors.textSecondary,
                 )
-                Spacer(modifier = Modifier.height(Dimension.D700))
+                Spacer(modifier = Modifier.height(Dimension.D500))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -562,25 +568,26 @@ private fun DeleteConfirmationDialog(
                     )
                     Spacer(modifier = Modifier.size(Dimension.D400))
                     Text(
-                        text = "Don't ask again",
+                        text = stringResource(AppRes.string.action_dont_ask_again),
                         typography = AppTheme.typography.Body.B500,
                     )
                 }
-                Spacer(modifier = Modifier.height(Dimension.D500))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
-                ) {
-                    ButtonGhost(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                        Text("Cancel")
-                    }
-                    ButtonDanger(onClick = onConfirm, modifier = Modifier.weight(1f)) {
-                        Text("Delete")
-                    }
+            }
+        },
+        bottomContent = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimension.D400),
+            ) {
+                ButtonGhost(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(AppRes.string.common_cancel))
+                }
+                ButtonDanger(onClick = onConfirm, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(AppRes.string.action_delete))
                 }
             }
-        }
-    }
+        },
+    )
 }
 
 private fun formatDuration(seconds: Int): String {
@@ -593,7 +600,7 @@ private val sampleBlock: Block = Block(
     id = "sample",
     name = "Work",
     duration = 45.seconds,
-    colorArgb = ColorPalette.defaultWorkArgb,
+    colorArgb = defaultRunnerColors.defaultWorkArgb,
     role = BlockRole.Cycle,
 )
 
@@ -619,7 +626,7 @@ private fun BlockEditContentLightBlockPreview() {
             state = BlockEditState(
                 block = sampleBlock.copy(
                     name = "Warm up",
-                    colorArgb = ColorPalette.warmupArgb,
+                    colorArgb = defaultRunnerColors.warmupArgb,
                     duration = 90.seconds,
                 ),
             ),

@@ -23,11 +23,11 @@ import com.dangerfield.hiittimer.libraries.inappmessages.InAppMessageDialog
 import com.dangerfield.hiittimer.libraries.inappmessages.InAppMessageDialogHost
 import com.dangerfield.hiittimer.libraries.inappmessages.InAppMessageDialogImage
 import com.dangerfield.hiittimer.libraries.inappmessages.InAppMessageDialogResult
-import hiittimer.libraries.inappmessages.impl.generated.resources.Res
-import hiittimer.libraries.inappmessages.impl.generated.resources.headshot_placeholder
+import rounds.libraries.inappmessages.impl.generated.resources.Res
+import rounds.libraries.inappmessages.impl.generated.resources.headshot_placeholder
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonGhost
 import com.dangerfield.hiittimer.libraries.ui.components.button.ButtonPrimary
-import com.dangerfield.hiittimer.libraries.ui.components.dialog.Dialog
+import com.dangerfield.hiittimer.libraries.ui.components.dialog.BasicDialog
 import com.dangerfield.hiittimer.libraries.ui.components.text.Text
 import com.dangerfield.hiittimer.system.AppTheme
 import org.jetbrains.compose.resources.painterResource
@@ -36,69 +36,61 @@ import org.jetbrains.compose.resources.painterResource
 fun InAppMessageOverlay(host: InAppMessageDialogHost) {
     val active by host.active.collectAsStateWithLifecycle()
     val current = active ?: return
+    val dialog = current.dialog
 
-    Dialog(
+    BasicDialog(
         onDismissRequest = { current.onResult(InAppMessageDialogResult.Dismissed) },
-    ) {
-        DialogBody(
-            dialog = current.dialog,
-            onPositive = { current.onResult(InAppMessageDialogResult.Positive) },
-            onNegative = { current.onResult(InAppMessageDialogResult.Negative) },
-        )
-    }
-}
-
-@Composable
-private fun DialogBody(
-    dialog: InAppMessageDialog,
-    onPositive: () -> Unit,
-    onNegative: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        dialog.image?.let { image ->
-            Image(
-                painter = painterResource(image.resource()),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(CircleShape),
-            )
-            Spacer(Modifier.height(16.dp))
-        }
-        Text(
-            text = dialog.title,
-            typography = AppTheme.typography.Heading.H700,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = dialog.body,
-            typography = AppTheme.typography.Body.B500,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(24.dp))
-        ButtonPrimary(
-            onClick = onPositive,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(dialog.positiveLabel)
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            ButtonGhost(onClick = onNegative) {
-                Text(dialog.negativeLabel)
+        topContent = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                dialog.image?.let { image ->
+                    Image(
+                        painter = painterResource(image.resource()),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(CircleShape),
+                    )
+                    Spacer(Modifier.height(16.dp))
+                }
+                Text(
+                    text = dialog.title,
+                    typography = AppTheme.typography.Heading.H700,
+                    textAlign = TextAlign.Center,
+                )
             }
-        }
-    }
+        },
+        content = {
+            Text(
+                text = dialog.body,
+                typography = AppTheme.typography.Body.B500,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        bottomContent = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ButtonPrimary(
+                    onClick = { current.onResult(InAppMessageDialogResult.Positive) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(dialog.positiveLabel)
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    ButtonGhost(onClick = { current.onResult(InAppMessageDialogResult.Negative) }) {
+                        Text(dialog.negativeLabel)
+                    }
+                }
+            }
+        },
+    )
 }
 
 private fun InAppMessageDialogImage.resource() = when (this) {

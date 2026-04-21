@@ -12,6 +12,7 @@ kotlin {
             implementation(projects.libraries.navigation)
 
             implementation(projects.libraries.core)
+            implementation(projects.libraries.preferences)
             implementation(projects.libraries.ui)
 
             implementation(compose.runtime)

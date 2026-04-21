@@ -30,7 +30,7 @@ class IosRunnerForegroundController @Inject constructor() : RunnerForegroundCont
         session.setCategory(
             AVAudioSessionCategoryPlayback,
             AVAudioSessionModeDefault,
-            MIX_WITH_OTHERS or DUCK_OTHERS,
+            MIX_WITH_OTHERS,
             null,
         )
         session.setActive(true, null)
@@ -67,6 +67,5 @@ class IosRunnerForegroundController @Inject constructor() : RunnerForegroundCont
 
     private companion object {
         const val MIX_WITH_OTHERS: ULong = 1u
-        const val DUCK_OTHERS: ULong = 2u
     }
 }

@@ -2,23 +2,6 @@
 
 Ideas worth building, not scheduled.
 
-## Floating Action Button for "Add Timer"
-
-Replace the top-right `+` in the app bar with a proper FAB on the timer list.
-Creation is the primary action on this screen; making it a FAB gives it the
-visual weight it deserves and frees the top bar for secondary actions (stats
-badge, settings).
-
-**Rough shape:**
-- Bottom-right FAB, extended variant ("New timer" label) when the list is
-  short, collapses to an icon-only FAB once the list scrolls.
-- Keep the top-bar `+` for the empty state only (it's already there and acts
-  as the primary visual anchor when the list is empty).
-- Add a subtle scale-in animation when a new timer is created so the FAB ties
-  into the card that appears.
-
-**Effort:** ~half a day, mostly layout shuffling and scroll-aware collapse.
-
 ## Stats, badges, and challenges page
 
 A dedicated screen opened from a shield/badge icon in the top bar of the
