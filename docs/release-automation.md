@@ -39,22 +39,20 @@ This is the one case the pipeline is not optimized for. Branch from the previous
 
 ## How automated fixes land (what the bots do)
 
-Every Monday 14:00 UTC, `sentry-triage.yml` runs Claude with [scripts/prompts/sentry-triage.md](../scripts/prompts/sentry-triage.md). The prompt is the only thing you need to edit to change behavior.
+Sentry triage runs as a **Claude Code routine on the maintainer's machine**, not as a CI job — so it uses your normal Claude subscription and the Sentry MCP instead of a paid API key + curl. Schedule it weekly (or on demand) with the prompt at [scripts/prompts/sentry-triage.md](../scripts/prompts/sentry-triage.md). The prompt is the only thing you edit to change behavior.
 
-For each run:
+Each run:
 
-1. Pull top N (default 5) unresolved **production** Sentry issues from the last 7 days. Debug/preview builds are filtered out.
-2. For each, create a `ai/sentry-<id>` branch, form a hypothesis, write the smallest plausible fix, add a regression test if possible.
-3. Open a PR titled `fix: ...` with labels `ai-autofix` and `sentry`.
-4. Issues the AI can't fix from source (third-party SDK frames, user-environment noise) become tracking GitHub issues instead of PRs.
+1. Pulls top 5 unresolved **production** Sentry issues from the last 7 days via the Sentry MCP. Debug/preview builds are filtered out.
+2. For each, creates a `ai/sentry-<id>` branch, forms a hypothesis, writes the smallest plausible fix, adds a regression test if possible.
+3. Opens a PR titled `fix: …` with labels `ai-autofix` and `sentry`.
+4. Issues that can't be fixed from source (third-party SDK frames, user-environment noise) become tracking GitHub issues instead of PRs.
 
 `auto-merge.yml` watches for the `ai-autofix` label and enables GitHub's native auto-merge on the PR. When CI is green, GitHub squash-merges it. The fix is now on main and the next release PR from release-please includes it.
 
-**To trigger triage manually**: Actions → **Sentry triage (Claude)** → Run workflow → optional `max_issues` cap and `dry_run` checkbox.
+**To block a specific PR from auto-merging**: remove the `ai-autofix` label or close the PR — GitHub's auto-merge cancels.
 
-**To block a specific PR from auto-merging**: remove the `ai-autofix` label or close the PR. GitHub's auto-merge cancels.
-
-**To pause triage entirely**: Actions → Sentry triage → "..." → **Disable workflow**.
+**To pause triage entirely**: disable the routine in Claude Code. No CI to touch.
 
 ### Post-release safety net
 
@@ -70,13 +68,13 @@ Play Store staged rollout isn't paused automatically — bump the `userFraction`
 ## System map
 
 ```
-PR   ──►  commitlint + CI                                 Sentry (prod issues, 7d)
-  │          │                                                   │
-  │          ▼ (green)                                            ▼ (Mon 14:00)
-  │      merge to main ◄─── Sentry triage (Claude) ──► fix: PRs, label ai-autofix
-  │                                                              │
-  │                                                              ▼
-  │                                                     auto-merge (on green CI)
+PR   ──►  commitlint + CI                 Claude routine (local, weekly)
+  │          │                                       │ reads Sentry MCP
+  │          ▼ (green)                                ▼
+  │      merge to main ◄──────── opens fix: PRs (label ai-autofix)
+  │                                                  │
+  │                                                  ▼
+  │                                         auto-merge on green CI
   ▼
 main ─── push ──► release-please (bot) maintains open "release vX.Y.Z" PR
                         │
@@ -102,8 +100,9 @@ main ─── push ──► release-please (bot) maintains open "release vX.Y.
 | [release-please.yml](../.github/workflows/release-please.yml) | push to main | Maintains the release PR, creates tag + GH Release on merge. |
 | [release.yml](../.github/workflows/release.yml) | tag `v*`, workflow_dispatch | Full production release to both stores. |
 | [auto-merge.yml](../.github/workflows/auto-merge.yml) | PR labeled `ai-autofix` | Enables GitHub auto-merge. |
-| [sentry-triage.yml](../.github/workflows/sentry-triage.yml) | Mon 14:00 UTC, manual | Weekly AI bug triage. |
 | [rollout-guard.yml](../.github/workflows/rollout-guard.yml) | every 30 min, manual | Halts rollout on crash spike. |
+
+Sentry triage is not a workflow — it runs as a Claude Code routine on the maintainer's machine. See [scripts/prompts/sentry-triage.md](../scripts/prompts/sentry-triage.md).
 
 ## Versioning
 
@@ -147,12 +146,6 @@ Keep the `.p12` in 1Password **and** on disk. Losing both = you can never update
 | `SENTRY_PROJECT` | variable | Sentry project slug. |
 
 All three empty = Sentry integration no-ops (releases aren't created, rollout-guard skips). The pipeline otherwise runs fine.
-
-### Needed for weekly AI triage
-
-| Name | Kind | Value |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | secret | From https://console.anthropic.com/. Budget ~$1–3/run. |
 
 ### Play service account — one-time setup
 

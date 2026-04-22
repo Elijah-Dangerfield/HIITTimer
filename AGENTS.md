@@ -116,7 +116,7 @@ Subject starts with a lowercase letter and describes the end-user effect, not th
 Background automation runs in GitHub Actions. Any AI agent opening PRs should match these conventions so the pipeline handles them correctly.
 
 - **`ai-autofix` label** on a PR → auto-merge once CI is green. Use for Sentry-triage fixes and similar low-risk patches.
-- **Sentry-triage cron** ([`sentry-triage.yml`](.github/workflows/sentry-triage.yml)) runs every Monday with [`scripts/prompts/sentry-triage.md`](scripts/prompts/sentry-triage.md) as the prompt. Edit that file — not the workflow — to change behavior.
+- **Sentry triage** runs as a Claude Code routine on the maintainer's machine (not a CI job) using [`scripts/prompts/sentry-triage.md`](scripts/prompts/sentry-triage.md) as the prompt. Edit that file to change behavior.
 - **release-please** owns `versions.properties`, `apps/ios/Configuration/Config.xcconfig` (MARKETING_VERSION), and `CHANGELOG.md`. Do not touch them in feature PRs.
 - **Never edit `.github/workflows/*`** from an autofix PR — CI changes are out of scope for the triage routine and need a human.
 

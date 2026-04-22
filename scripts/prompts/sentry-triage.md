@@ -1,39 +1,41 @@
 Sentry triage routine.
 
-Scheduled Claude run. Pull the most impactful unresolved Sentry issues for HIIT Timer, pick the ones fixable from app code, open one pull request per fix.
+Weekly scheduled-task prompt. Pull the most impactful unresolved **production** Sentry issues for the app, pick the ones fixable from the codebase, open one pull request per fix.
 
-Environment:
-- SENTRY_ORG, SENTRY_PROJECT, SENTRY_AUTH_TOKEN for Sentry API access.
-- GH_TOKEN for GitHub API via gh.
-- MAX_ISSUES cap on PRs opened per run, default 5.
-- DRY_RUN when true, report without opening PRs.
+Tools at your disposal: Sentry MCP (search_issues, search_issue_events, get_event_attachment, etc.), gh CLI (already authed), local file tools, gradle. No API token or curl required — use the MCP.
 
 Procedure:
 
-1. Pull top unresolved production issues over the last 7 days, sorted by frequency. GET sentry.io/api/0/projects/$SENTRY_ORG/$SENTRY_PROJECT/issues with query "is:unresolved environment:production", sort freq, statsPeriod 7d, limit MAX_ISSUES. The `environment:production` filter is mandatory — debug/preview crashes do not ship to users and must not be fixed by this routine.
+1. Via the Sentry MCP, list unresolved issues on the production environment from the last 7 days, sorted by event frequency. Cap at 5.
 
-2. Fetch the latest event for each issue from sentry.io/api/0/issues/$ISSUE_ID/events/latest/ to get stack trace and tags.
+2. For each issue, pull the latest event for stack trace + tags. Skip any issue where:
+   - The top in-app frame is in a third-party SDK or system framework you can't edit
+   - The fingerprint points to a user-environment problem (network timeout, disk full, bare cancelled coroutine)
+   - An open PR already references the issue ID (gh pr list --search "$ISSUE_ID")
+   - The issue is already resolved on main (git log --all --grep "$ISSUE_ID")
 
-3. Filter out issues where the top frame is in a third-party SDK, system framework, or vendored library you cannot edit. Also skip user-environment fingerprints (network timeout, disk full, bare cancelled coroutine). Skip issues with an open PR already referencing them (gh pr list --search ISSUE_ID). Skip issues already resolved on main (git log --all --grep ISSUE_ID). For skipped issues, open a tracking GitHub issue so they stay visible.
+   For each skipped issue, open a tracking GitHub issue so it stays visible without clogging the auto-merge queue.
 
-4. For each triageable issue:
-   - Create branch ai/sentry-SHORT_ID.
-   - Read relevant source. Form a root-cause hypothesis.
-   - Apply the smallest fix plausible. Prefer defensive checks at the failure site over rewrites.
-   - Add a regression test only if reproducible from a unit test.
-   - Verify build with gradlew compileDebugKotlinAndroid and compileKotlinIosSimulatorArm64, plus testDebugUnitTest if tests were added.
-   - If the build fails and cannot be fixed in one more attempt, abandon the branch and open a tracking issue.
+3. For each triageable issue:
+   - Create branch ai/sentry-<short-issue-id>
+   - Read relevant source, form a root-cause hypothesis
+   - Apply the smallest plausible fix. Prefer defensive checks at the failure site over rewrites
+   - Add a regression test only if the failure is reproducible from a unit test
+   - Verify build:
+       ./gradlew :apps:compose:compileDebugKotlinAndroid :apps:compose:compileKotlinIosSimulatorArm64
+       ./gradlew testDebugUnitTest  (if tests were added)
+   - If the build fails and you can't fix it in one more attempt, abandon the branch and open a tracking issue
 
-5. Open one PR per fix:
-   - Title in the form fix: terse description (conventional commit — release-please uses this for the changelog).
-   - Body contains a Sentry link, a 1-2 sentence hypothesis, and what changed.
-   - Labels ai-autofix and sentry. The ai-autofix label triggers auto-merge when CI is green.
+4. Open one PR per fix:
+   - Title: fix: <terse description>  (conventional commit — release-please derives the changelog from this)
+   - Body: Sentry link, 1-2 sentence hypothesis of the root cause, what changed
+   - Labels: ai-autofix (triggers auto-merge on green CI), sentry
 
-6. Write a GITHUB_STEP_SUMMARY entry listing issues seen, PRs opened, and skipped issues with reasons.
+5. End-of-run summary: issues seen, PRs opened, issues skipped with reasons. Post it to your final reply.
 
 Hard limits:
-- Do not modify anything under .github/workflows.
-- Do not bump dependency versions. If a dep is at fault, open a tracking issue.
-- Do not edit versions.properties, CHANGELOG.md, or Config.xcconfig — release-please owns them.
-- Do not force-push, rebase published branches, or delete branches you did not create.
-- If DRY_RUN is true, do everything except gh pr create — print the diff and intended PR body instead.
+- Never modify anything under .github/workflows. Fixing CI is outside this routine.
+- Never bump dependency versions. If a dep is at fault, open a tracking issue instead.
+- Never edit versions.properties, CHANGELOG.md, or Config.xcconfig — release-please owns them.
+- Never force-push, rebase published branches, or delete branches you did not create.
+- If I say "dry run", do everything except gh pr create — print the intended diff and PR body instead.
