@@ -39,21 +39,10 @@ header {
 }
 
 .logo {
-    display: inline-block;
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: conic-gradient(from -90deg, var(--accent) 0% 30%, #ffffff 30% 100%);
+    display: block;
+    width: 96px;
+    height: 96px;
     margin-bottom: 16px;
-    position: relative;
-}
-
-.logo::after {
-    content: "";
-    position: absolute;
-    inset: 8px;
-    background: var(--bg);
-    border-radius: 8px;
 }
 
 h1 {
