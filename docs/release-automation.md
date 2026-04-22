@@ -95,7 +95,7 @@ main ─── push ──► release-please (bot) maintains open "release vX.Y.
 
 | Workflow | Fires on | What it does |
 |---|---|---|
-| [ci.yml](../.github/workflows/ci.yml) | PRs, push to main | Compile + tests. On main push: TestFlight internal preview. |
+| [ci.yml](../.github/workflows/ci.yml) | PRs, push to main | Compile + tests. On main push: TestFlight internal preview. Skipped on release-please's PR and its merge commit (bumps-only changes can't break the build). |
 | [commitlint.yml](../.github/workflows/commitlint.yml) | PRs | Rejects non-conventional PR titles. |
 | [release-please.yml](../.github/workflows/release-please.yml) | push to main | Maintains the release PR, creates tag + GH Release on merge. |
 | [release.yml](../.github/workflows/release.yml) | tag `v*`, workflow_dispatch | Full production release to both stores. |
