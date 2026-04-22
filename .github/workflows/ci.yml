@@ -41,6 +41,12 @@ concurrency:
 jobs:
   build-and-test:
     name: Build + test
+    # release-please's PR only changes versionName + CHANGELOG — it can't break
+    # the build. Skip the expensive macOS run on that branch. The merge commit
+    # into main is also a pure bump, so skip it there too.
+    if: >
+      github.head_ref != 'release-please--branches--main' &&
+      !startsWith(github.event.head_commit.message, 'chore: release')
     runs-on: macos-15
     timeout-minutes: 45
 
@@ -89,7 +95,12 @@ jobs:
 
   ios-preview:
     name: iOS TestFlight internal (preview)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Skip the preview build when the push is a release-please merge commit —
+    # release.yml will build and ship the same code to TestFlight external.
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      !startsWith(github.event.head_commit.message, 'chore: release')
     needs: build-and-test
     runs-on: macos-15
     timeout-minutes: 60
