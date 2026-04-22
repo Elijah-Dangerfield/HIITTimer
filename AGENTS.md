@@ -27,7 +27,12 @@ libraries/<name>/      # Interfaces
 libraries/<name>/impl/ # Implementations
 ```
 
-**Rules:** Features never depend on features. Shared code → libraries. Main modules expose interfaces only; impl modules contain implementations.
+**Rules:**
+
+- `features/<x>/impl` may depend on another feature's **api** (`features/<y>`), never on its `impl`. This is how features talk to each other without creating implementation cycles.
+- `features/<x>` (api) must **not** depend on another feature's api — api-to-api edges become cycles the moment someone adds the reverse dependency. Keep api modules leaf-ish.
+- Only `apps/compose` depends on `impl` modules. Impls are the DI wiring the app composes; anything else reaching into an impl breaks the public-interface contract.
+- Libraries follow the same api/impl split. Shared code belongs in libraries, not in feature apis.
 
 **Storage exception:** `libraries/storage/impl` may depend on any submodule named `storage`, whether under `libraries/*` or `features/*` (e.g. `features/timers/storage`). This lets features colocate their Room entities/DAOs while still registering them with the single global `AppDatabase`. Nothing else should depend on a feature's storage submodule.
 

@@ -38,9 +38,11 @@ libraries/<name>/impl/ # Implementations
 
 ### Architecture Rules
 
-- **Features cannot depend on other features** — keeps dependency graph acyclic
-- **Shared code belongs in libraries** — extract common functionality up
-- **Main modules expose interfaces only** — `impl` modules contain implementations
+- **api / impl split**: `features/<x>` holds routes + public interfaces; `features/<x>/impl` holds screens, ViewModels, wiring.
+- **Cross-feature talk goes api → impl**: `features/<x>/impl` can depend on `features/<y>` (api). Never on `features/<y>/impl`.
+- **No api-to-api edges**: `features/<x>` must not depend on another feature's api. That path leads to cycles the first time someone adds the reverse.
+- **Only `apps/compose` depends on impls** — it's the DI glue. Anything else reaching into an impl breaks the interface contract.
+- **Libraries follow the same rules.** Shared code lives in libraries, not in feature apis.
 
 ### Creating New Modules
 
