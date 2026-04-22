@@ -6,6 +6,7 @@ import com.dangerfield.hiittimer.util.SharedConstants
 import com.dangerfield.hiittimer.util.configureAndroid
 import com.dangerfield.hiittimer.util.configureKotlinInject
 import com.dangerfield.hiittimer.util.configureReleaseSigning
+import com.dangerfield.hiittimer.util.verifyGitHooksInstalled
 import com.dangerfield.hiittimer.util.configureKotlinMultiplatform
 import com.dangerfield.hiittimer.util.libs
 import com.dangerfield.hiittimer.util.loadSupabaseMetadata
@@ -47,6 +48,7 @@ import org.gradle.kotlin.dsl.configure
 class ApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
+            verifyGitHooksInstalled()
             val versionMetadata = loadVersionMetadata()
             with(pluginManager) {
                 apply("org.jetbrains.kotlin.multiplatform")

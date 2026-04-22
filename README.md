@@ -4,6 +4,14 @@ A Kotlin Multiplatform HIIT / interval timer app, built with Compose Multiplatfo
 
 ## Build & Run
 
+First time in a fresh clone:
+
+```shell
+./scripts/install_hooks.sh   # enables the Conventional Commits commit-msg hook
+```
+
+Then:
+
 ```shell
 # Android
 ./gradlew :apps:compose:assembleDebug
@@ -14,6 +22,8 @@ A Kotlin Multiplatform HIIT / interval timer app, built with Compose Multiplatfo
 # iOS - or open in Xcode
 open apps/ios/iosApp.xcodeproj
 ```
+
+The first Gradle build will fail with a remediation message if you skip the hook install.
 
 ## Project Structure
 

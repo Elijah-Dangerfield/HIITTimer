@@ -4,6 +4,7 @@ Utility scripts for the Rounds project.
 
 | Script | Purpose |
 |---|---|
+| [install_hooks.sh](install_hooks.sh) | One-time per clone: wire `.githooks/` as Git's hooks directory so `commit-msg` enforces Conventional Commits. Gradle builds fail until this is run. |
 | [create_module.main.kts](create_module.main.kts) | Scaffold a new KMP module (feature or library) with the right convention plugin, source sets, and wiring in `settings.gradle.kts` + `apps/compose/build.gradle.kts`. |
 | [rotate_apple_sign_in_token.main.kts](rotate_apple_sign_in_token.main.kts) | Rotate the Apple Sign In backend token. Run when the key expires. |
 | [generate_sounds.py](generate_sounds.py) | Regenerate the bundled audio cue files under `features/timers/impl/src/commonMain/composeResources/files/sounds/`. |

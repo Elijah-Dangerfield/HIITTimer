@@ -102,7 +102,9 @@ Every PR title must be a conventional commit. PRs are squash-merged, so the titl
 | `perf:` | patch | Performance improvements |
 | `refactor:`, `docs:`, `style:`, `test:`, `build:`, `ci:`, `chore:` | none | Everything else (still allowed) |
 
-Subject starts with a lowercase letter and describes the end-user effect, not the implementation. The `commitlint.yml` workflow enforces this on PRs.
+Subject starts with a lowercase letter and describes the end-user effect, not the implementation. Enforced in two places:
+- **Locally** via `.githooks/commit-msg` — run `./scripts/install_hooks.sh` once per clone. The first Gradle build will fail until the hook is installed.
+- **On PRs** via the `commitlint.yml` workflow (squash-merged PR titles).
 
 ## Automation routines
 

@@ -182,6 +182,10 @@ The pipeline ships only the binary + release notes (`skip_metadata: true`, `skip
 - [ ] Content rating, target audience, data safety, category, contact
 - [ ] **Ship the first production release manually from Play Console.** `r0adkll/upload-google-play` can't push to production until there's an approved prod release to update. Use `track: internal` in [release.yml](../.github/workflows/release.yml) for the first few releases if you prefer automation all the way down.
 
+### One-time GitHub Pages source
+
+Marketing/landing pages (`index.html`, `privacy.html`, `terms.html`, `style.css`) live in [pages/](../pages/) so that `docs/` can stay developer-focused. Set **Settings → Pages → Source** to `main` / `/pages` so the site serves at `https://<user>.github.io/<repo>/` without any path change. The URLs referenced from the app (`/privacy.html`, `/terms.html`) stay the same.
+
 ## Runbook: something broke
 
 | Symptom | First thing to check |
