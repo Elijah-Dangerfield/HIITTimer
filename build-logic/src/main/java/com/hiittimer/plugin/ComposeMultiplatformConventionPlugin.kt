@@ -5,6 +5,7 @@ import com.dangerfield.hiittimer.ext.ConfigurationExtension
 import com.dangerfield.hiittimer.util.configureAndroid
 import com.dangerfield.hiittimer.util.configureKotlinInject
 import com.dangerfield.hiittimer.util.configureKotlinMultiplatform
+import com.dangerfield.hiittimer.util.enforceModuleBoundaries
 import com.dangerfield.hiittimer.util.libs
 import com.dangerfield.hiittimer.util.optInKotlinMarkers
 import org.gradle.api.Plugin
@@ -42,6 +43,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 class ComposeMultiplatformConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
+            enforceModuleBoundaries()
             with(pluginManager) {
                 apply("org.jetbrains.kotlin.multiplatform")
                 apply("com.android.library")
