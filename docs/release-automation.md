@@ -100,7 +100,7 @@ main ─── push ──► release-please (bot) maintains open "release vX.Y.
 | [release-please.yml](../.github/workflows/release-please.yml) | push to main | Maintains the release PR, creates tag + GH Release on merge. |
 | [release.yml](../.github/workflows/release.yml) | tag `v*`, workflow_dispatch | Full production release to both stores. |
 | [auto-merge.yml](../.github/workflows/auto-merge.yml) | PR labeled `ai-autofix` | Enables GitHub auto-merge. |
-| [rollout-guard.yml](../.github/workflows/rollout-guard.yml) | every 30 min, manual | Halts rollout on crash spike. |
+| [rollout-guard.yml](../.github/workflows/rollout-guard.yml) | dispatched by release.yml on success | Halts rollout on crash spike. |
 
 Sentry triage is not a workflow — it runs as a Claude Code routine on the maintainer's machine. See [scripts/prompts/sentry-triage.md](../scripts/prompts/sentry-triage.md).
 
