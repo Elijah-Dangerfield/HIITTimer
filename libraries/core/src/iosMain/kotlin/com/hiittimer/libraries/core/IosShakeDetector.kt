@@ -83,7 +83,7 @@ class IosShakeDetector : ShakeDetector {
 
     companion object {
         private const val UPDATE_INTERVAL: NSTimeInterval = 0.1
-        private const val SHAKE_THRESHOLD = 1.5
+        private const val SHAKE_THRESHOLD = 3.0
         private const val SHAKE_COOLDOWN_MS = 1500L
     }
 }

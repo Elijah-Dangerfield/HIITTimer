@@ -2,7 +2,6 @@ package com.dangerfield.hiittimer.libraries.core
 
 import com.dangerfield.hiittimer.libraries.core.logging.KLog
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlin.coroutines.cancellation.CancellationException
 
 
 val Throwable.shouldNotBeCaught: Boolean
@@ -17,26 +16,31 @@ val Throwable.shouldNotBeCaught: Boolean
     }
 
 private fun Throwable.isThrowableCancellation() =
-    this is CancellationException && this !is TimeoutCancellationException
+    this is kotlinx.coroutines.CancellationException && this !is TimeoutCancellationException
 
-class DebugException(e: Throwable? = null, message: String? = e?.message) :
+/**
+ * Used to mark an exception as thrown on purpose.
+ */
+class CaughtException(e: Throwable? = null, message: String? = e?.message) :
     Exception(message, e)
 
 fun throwIfDebug(throwable: Throwable) {
+    KLog.e(throwable)
     if (BuildInfo.isDebug) {
-        throw DebugException(message = throwable.message.orEmpty())
+        throw CaughtException(throwable)
     }
+
 }
 
 fun throwIfDebug(lazyMessage: () -> Any) {
-    if (BuildInfo.isDebug) {
-        throw DebugException(message = lazyMessage().toString())
-    }
     KLog.e(lazyMessage().toString())
+    if (BuildInfo.isDebug) {
+        throw CaughtException(message = lazyMessage().toString())
+    }
 }
 
 inline fun checkInDebug(value: Boolean, lazyMessage: () -> Any) {
     if (!value) {
-        if (BuildInfo.isDebug) throw DebugException(message = lazyMessage().toString())
+        if (BuildInfo.isDebug) throw CaughtException(message = lazyMessage().toString())
     }
 }

@@ -26,7 +26,7 @@ fun <T> Catching<T>.getExceptionOrNull(): Throwable? = exceptionOrNull()
 
 fun <T> Catching<T>.throwIfDebug(): Catching<T> = onFailure {
     if (BuildInfo.isDebug && this.isFailure) {
-        throw DebugException(it)
+        throw CaughtException(it)
     }
 }
 

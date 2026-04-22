@@ -31,20 +31,3 @@ fun <A, B, C, D, T> allOrNone(one: A?, two: B?, three: C?, four: D?, block: (A, 
  */
 fun Any.doNothing() = Unit
 fun doNothing() = Unit
-
-///**
-// * Convenience method for converting Any to a specific type
-// */
-//@Suppress("UNCHECKED_CAST")
-//fun Any?.convertTo(clazz: Class<*>): Any? {
-//    return when (clazz) {
-//        Boolean::class.java -> this?.toString()?.toBoolean()
-//        Int::class.java -> this?.toString()?.toIntOrNull()
-//        Double::class.java -> this?.toString()?.toDoubleOrNull()
-//        Float::class.java -> this?.toString()?.toFloatOrNull()
-//        Byte::class.java -> this?.toString()?.toByteOrNull()
-//        Short::class.java -> this?.toString()?.toShortOrNull()
-//        Long::class.java -> this?.toString()?.toLongOrNull()
-//        else -> this
-//    }
-//}

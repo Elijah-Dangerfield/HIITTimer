@@ -1,16 +1,12 @@
 package com.dangerfield.hiittimer
 
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavGraphBuilder
 import com.dangerfield.hiittimer.features.settings.BugReportRoute
-import com.dangerfield.hiittimer.features.settings.ShakeToReportEnabledPref
 import com.dangerfield.hiittimer.libraries.navigation.FeatureEntryPoint
 import com.dangerfield.hiittimer.libraries.navigation.Router
 import com.dangerfield.hiittimer.libraries.navigation.ShakeDialogRoute
 import com.dangerfield.hiittimer.libraries.navigation.dialog
-import com.dangerfield.hiittimer.libraries.preferences.Preferences
 import com.dangerfield.hiittimer.libraries.ui.components.dialog.ShakeDialog
-import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
 import org.jetbrains.compose.resources.stringResource
 import rounds.libraries.resources.generated.resources.Res as AppRes
@@ -26,13 +22,11 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @Inject
 class ShakeDialogEntryPoint(
     private val shakeHandler: ShakeHandler,
-    private val preferences: Preferences,
 ) : FeatureEntryPoint {
 
     override fun NavGraphBuilder.buildNavGraph(router: Router) {
         dialog<ShakeDialogRoute> { _, dialogState ->
             val shakeContext = stringResource(AppRes.string.bug_report_context_shake)
-            val scope = rememberCoroutineScope()
 
             val dismiss: () -> Unit = {
                 shakeHandler.onDialogDismissed()
@@ -52,10 +46,8 @@ class ShakeDialogEntryPoint(
                     )
                 },
                 onDontShowAgain = {
-                    scope.launch {
-                        preferences.set(ShakeToReportEnabledPref, false)
-                    }
-                    dismiss()
+                    shakeHandler.onDontShowAgain()
+                    router.goBack()
                 },
             )
         }

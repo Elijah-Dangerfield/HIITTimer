@@ -84,7 +84,7 @@ class AndroidShakeDetector(
     }
 
     companion object {
-        private const val SHAKE_THRESHOLD = 800
+        private const val SHAKE_THRESHOLD = 2000
         private const val SHAKE_COOLDOWN_MS = 1500L
         private const val SHAKE_SAMPLE_INTERVAL_MS = 100
     }

@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import kotlin.concurrent.Volatile
 
 @Inject
 @SingleIn(AppScope::class)
@@ -45,6 +46,15 @@ class ShakeHandler(
      *  to fire only once per app session. */
     fun onDialogDismissed() {
         isShowingDialog = false
+    }
+
+    /** Disable future shake dialogs. Runs on the handler's app-scoped coroutine so the write
+     *  completes even after the dialog composable (and its scope) is torn down. */
+    fun onDontShowAgain() {
+        isShowingDialog = false
+        scope.launch {
+            preferences.set(ShakeToReportEnabledPref, false)
+        }
     }
 
     private suspend fun handleShake() {
