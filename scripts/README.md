@@ -1,102 +1,38 @@
-# Rounds Scripts
+# scripts/
 
-This directory contains utility scripts for the Rounds project.
+Utility scripts for the Rounds project.
 
-## init_project.main.kts
-
-**Run this first!** This script initializes your project from the template by renaming all placeholder names to your chosen project name.
-
-### Usage
-
-```bash
-cd scripts
-./init_project.main.kts
-```
-
-The script will prompt you for:
-- **App Name** (e.g., "My Awesome App") - used for display names
-- **Package Name** (e.g., "com.example.myapp") - used for package declarations
-
-It handles all naming conventions automatically:
-- `PascalCase` → MyAwesomeApp
-- `camelCase` → myAwesomeApp
-- `kebab-case` → my-awesome-app
-- `snake_case` → my_awesome_app
-- `lowercase` → myawesomeapp
-
----
+| Script | Purpose |
+|---|---|
+| [create_module.main.kts](create_module.main.kts) | Scaffold a new KMP module (feature or library) with the right convention plugin, source sets, and wiring in `settings.gradle.kts` + `apps/compose/build.gradle.kts`. |
+| [rotate_apple_sign_in_token.main.kts](rotate_apple_sign_in_token.main.kts) | Rotate the Apple Sign In backend token. Run when the key expires. |
+| [generate_sounds.py](generate_sounds.py) | Regenerate the bundled audio cue files under `features/timers/impl/src/commonMain/composeResources/files/sounds/`. |
+| [halt_asc_phased_release.sh](halt_asc_phased_release.sh) | Pause an in-progress App Store phased release via the ASC API. Invoked by the rollout-guard workflow; runnable locally with `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_BASE64` set. |
+| [cleanup.sh](cleanup.sh) | Nuke build artifacts and Gradle caches. |
+| [prompts/](prompts/) | Prompts used by scheduled Claude workflows. Currently: [sentry-triage.md](prompts/sentry-triage.md). |
 
 ## create_module.main.kts
 
-An intelligent Kotlin script for creating new KMP modules with proper structure and configuration.
+### Interactive
 
-### Features
-
-✅ **Kotlin Multiplatform Structure**: Creates proper KMP module structure with `commonMain`, `androidMain`, `iosMain`, and `jvmMain` source sets
-
-✅ **Smart Plugin Selection**: Automatically applies correct build plugins:
-- `hiittimer.feature` for UI feature modules
-- `hiittimer.kotlin.multiplatform` for pure Kotlin libraries
-
-✅ **Package Structure**: Creates proper package hierarchy following `com.dangerfield.hiittimer.{type}.{module}`
-
-✅ **Auto-Generated Files**: Creates starter files appropriate for module type:
-- Feature modules get Screen classes with Compose UI and ViewModel
-- Library modules get basic Kotlin classes
-
-✅ **Dependency Management**: Automatically updates:
-- `settings.gradle.kts` with module includes
-- `apps/compose/build.gradle.kts` with project dependencies
-
-✅ **Implementation Module Pattern**: Supports public/impl module pattern for libraries
-
-### Usage
-
-#### Interactive Mode
-
-```bash
-cd scripts
-./create_module.main.kts
+```sh
+./scripts/create_module.main.kts
 ```
 
-#### Command Line Arguments
+### Non-interactive
 
-```bash
-./create_module.main.kts [module-type] [module-name]
+```sh
+./scripts/create_module.main.kts <type> <name>
+# type: feature | library
+# name: bare (my-feature) or nested (user:preferences)
 ```
 
-### Examples
+Examples:
 
-#### Create a Feature Module
-
-```bash
-./create_module.main.kts feature messaging
+```sh
+./scripts/create_module.main.kts feature messaging
+./scripts/create_module.main.kts library analytics
+./scripts/create_module.main.kts library user:preferences
 ```
 
-#### Create a Library Module
-
-```bash
-./create_module.main.kts library analytics
-```
-
-#### Create a Sub-Module
-
-```bash
-./create_module.main.kts library user:preferences
-```
-
----
-
-## rotate_apple_sign_in_token.main.kts
-
-Utility script for rotating Apple Sign In tokens. Used for authentication setup.
-
----
-
-## cleanup.sh
-
-Script for cleaning build artifacts and caches.
-
-```bash
-./scripts/cleanup.sh
-```
+Applies `hiittimer.feature` to feature modules and `hiittimer.kotlin.multiplatform` to libraries. Libraries follow the public-interface / `impl` split automatically.
