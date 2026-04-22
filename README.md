@@ -1,5 +1,8 @@
 # Rounds
 
+<img width="3852" height="2778" alt="Frame 27" src="https://github.com/user-attachments/assets/ffe500d9-b83c-4aa7-9038-c06750cab457" />
+
+
 A Kotlin Multiplatform HIIT / interval timer app, built with Compose Multiplatform, Room, and a unidirectional-data-flow ViewModel base class.
 
 ## Build & Run
