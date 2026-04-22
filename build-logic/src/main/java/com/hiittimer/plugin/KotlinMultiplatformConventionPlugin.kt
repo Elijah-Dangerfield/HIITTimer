@@ -8,12 +8,10 @@ import com.dangerfield.hiittimer.util.configureKotlinInject
 import com.dangerfield.hiittimer.util.enableExpectActualClasses
 import com.dangerfield.hiittimer.util.enforceModuleBoundaries
 import com.dangerfield.hiittimer.util.libs
-import com.dangerfield.hiittimer.util.loadSupabaseMetadata
 import com.dangerfield.hiittimer.util.loadVersionMetadata
 import com.dangerfield.hiittimer.util.optInKotlinMarkers
 import com.dangerfield.hiittimer.util.VersionMetadata
 import com.dangerfield.hiittimer.util.writeCommonMetadata
-import com.dangerfield.hiittimer.util.writeSupabaseMetadata
 import com.github.gmazzo.buildconfig.BuildConfigExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -80,7 +78,6 @@ class KotlinMultiplatformConventionPlugin : Plugin<Project> {
     }
 
     private fun Project.configureSharedBuildConfig(metadata: VersionMetadata) {
-        val supabaseMetadata = loadSupabaseMetadata()
         extensions.configure(BuildConfigExtension::class.java) {
             packageName("com.dangerfield.hiittimer.buildinfo")
             className("HIITTimerBuildConfig")
@@ -88,7 +85,6 @@ class KotlinMultiplatformConventionPlugin : Plugin<Project> {
                 internalVisibility = false
             }
             writeCommonMetadata(metadata)
-            writeSupabaseMetadata(supabaseMetadata)
         }
     }
 }

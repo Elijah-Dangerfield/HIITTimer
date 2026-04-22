@@ -9,12 +9,10 @@ import com.dangerfield.hiittimer.util.configureReleaseSigning
 import com.dangerfield.hiittimer.util.verifyGitHooksInstalled
 import com.dangerfield.hiittimer.util.configureKotlinMultiplatform
 import com.dangerfield.hiittimer.util.libs
-import com.dangerfield.hiittimer.util.loadSupabaseMetadata
 import com.dangerfield.hiittimer.util.loadVersionMetadata
 import com.dangerfield.hiittimer.util.optInKotlinMarkers
 import com.dangerfield.hiittimer.util.VersionMetadata
 import com.dangerfield.hiittimer.util.writeCommonMetadata
-import com.dangerfield.hiittimer.util.writeSupabaseMetadata
 import com.github.gmazzo.buildconfig.BuildConfigExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -109,7 +107,6 @@ class ApplicationConventionPlugin : Plugin<Project> {
     }
 
     private fun Project.configureAppBuildConfig(metadata: VersionMetadata) {
-        val supabaseMetadata = loadSupabaseMetadata()
         extensions.configure(BuildConfigExtension::class.java) {
             packageName("${metadata.applicationId}.appconfig")
             className("AppBuildConfig")
@@ -117,7 +114,6 @@ class ApplicationConventionPlugin : Plugin<Project> {
                 internalVisibility = false
             }
             writeCommonMetadata(metadata)
-            writeSupabaseMetadata(supabaseMetadata)
         }
     }
 }

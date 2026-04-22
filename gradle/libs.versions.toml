@@ -32,7 +32,6 @@ sqlite = "2.6.2"
 datastore = "1.2.1"
 roomGradlePlugin = "2.8.4"
 sentryKmp = "0.25.0"
-supabaseKt = "3.5.0"
 lifecycleProcess = "2.10.0"
 reorderable = "3.0.0"
 
