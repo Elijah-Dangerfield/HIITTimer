@@ -1,3 +1,21 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PR gate + preview builds on main.
+#
+# Fires on:     PRs and pushes to main (ignores docs-only changes and
+#               CHANGELOG.md, since release-please commits to CHANGELOG.md).
+# Jobs:         build-and-test — compiles Android+iOS Kotlin targets and runs
+#                                 unit tests. Blocks PR merges if it fails.
+#               ios-preview    — (main pushes only) signs + uploads to
+#                                 TestFlight internal so the maintainer can
+#                                 dogfood every merge. Costs macOS minutes.
+# Side effects: TestFlight internal build appears in App Store Connect after
+#               every main push. External testers are NOT notified — that
+#               only happens via release.yml on tag pushes.
+# Edit to change: compile commands, test task, or the `ios-preview` job's
+#                 `if:` condition if per-merge previews become noisy.
+# See: docs/release-automation.md
+# ─────────────────────────────────────────────────────────────────────────────
+
 name: CI
 
 on:

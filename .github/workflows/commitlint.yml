@@ -1,3 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Enforces Conventional Commit PR titles so release-please can classify
+# each change into fix / feat / breaking for auto version bumping.
+#
+# Fires on:     PR open / edit / reopen / synchronize.
+# Side effects: Blocks PR merge until the title matches the pattern.
+# Notes:        Individual commit messages on a feature branch are checked
+#               locally by .githooks/commit-msg (installed by
+#               scripts/install_hooks.sh). This workflow is the server-side
+#               fallback that checks the PR title — which becomes the merge
+#               commit message because PRs are squash-merged.
+# Edit to change: the `types` list or `subjectPattern` below.
+# See: AGENTS.md → "Conventional commits (required)"
+# ─────────────────────────────────────────────────────────────────────────────
+
 name: commitlint
 
 on:

@@ -1,3 +1,17 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Auto-merges PRs carrying the `ai-autofix` label once required checks pass.
+#
+# Fires on:     PRs that are opened / labeled / synchronized / reopened /
+#               marked ready-for-review. Also re-probes on check_suite and CI
+#               workflow completions so merges trigger when checks turn green.
+# Side effects: Enables GitHub's native auto-merge (squash) on matching PRs.
+#               Actual merge happens when all required status checks pass.
+# Use case:     Sentry-triage routine opens `ai-autofix` PRs; this ships them
+#               without a human click. Remove the label to block merge.
+# Edit to change: the `contains(..., 'ai-autofix')` filter or merge strategy.
+# See: docs/release-automation.md → "How automated fixes land"
+# ─────────────────────────────────────────────────────────────────────────────
+
 name: Auto-merge
 
 on:

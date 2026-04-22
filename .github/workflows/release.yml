@@ -1,3 +1,34 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# The production ship. Builds both platforms and submits to the stores.
+#
+# Fires on:     Push of a tag matching `v*` (release-please creates these
+#               when you merge the release PR). Also workflow_dispatch with
+#               an explicit tag for re-runs after partial failures.
+#
+# Jobs (in order):
+#   resolve-tag           — normalizes tag + version from trigger input.
+#   android               — signs AAB, renders release notes, uploads to
+#                           Play Console production track (10% staged),
+#                           creates Sentry release + uploads mappings.
+#                           Uploads AAB/APK artifacts to the GitHub Release.
+#   ios                   — builds IPA, uploads to TestFlight external group
+#                           "main", submits to App Store review with Apple's
+#                           phased release enabled, creates Sentry release +
+#                           uploads dSYMs. Uploads IPA artifact.
+#   attach-artifacts      — attaches all platform binaries to the GH Release.
+#   trigger-rollout-guard — dispatches rollout-guard.yml to start monitoring
+#                           crash-free session rate for this release.
+#
+# Side effects: HUGE. Real builds go to TestFlight external testers and into
+#               the App Store review queue; Android goes to Play production
+#               (staged). Only trigger this with intention.
+# Escape hatches: `skip_app_store` and `skip_play_store` inputs on
+#                 workflow_dispatch if one platform needs re-running.
+# Edit to change: apps/ios/fastlane/Fastfile (iOS submission details),
+#                 this file's Play upload step (track, userFraction).
+# See: docs/release-automation.md → "Cutting a release"
+# ─────────────────────────────────────────────────────────────────────────────
+
 name: Release
 
 on:

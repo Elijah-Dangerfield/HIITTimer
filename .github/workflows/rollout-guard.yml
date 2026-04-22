@@ -1,3 +1,22 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Post-release safety net. Watches Sentry; pauses rollout if things get bad.
+#
+# Fires on:     workflow_dispatch only — dispatched by release.yml on a
+#               successful release, and invokable manually for re-checks.
+# What it does: Queries Sentry's crash-free-session rate for the given
+#               release over the last 24h. If below the threshold
+#               (default 99.5%), it:
+#                 1) Calls the App Store Connect API to pause Apple's
+#                    phased release (via scripts/halt_asc_phased_release.sh).
+#                 2) Opens a P0 GitHub issue labeled
+#                    `rollout-regression, ai-autofix`, which the Sentry-triage
+#                    routine will pick up on its next run.
+# Not automated: Play Store staged rollout (Google doesn't expose a clean
+#                pause API — halt manually in Play Console if needed).
+# Edit to change: threshold inputs, halt script, or the Sentry query.
+# See: docs/release-automation.md → "Post-release safety net"
+# ─────────────────────────────────────────────────────────────────────────────
+
 name: Rollout guard
 
 on:

@@ -1,3 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Maintains the release PR. Bumps versions, writes CHANGELOG, creates tag.
+#
+# Fires on:     Push to main.
+# Side effects: Opens or updates a single open PR titled "chore: release main".
+#               When that PR is merged, creates the git tag `vX.Y.Z` and a
+#               matching GitHub Release. The tag push then triggers release.yml.
+# Version rule: fix/perf → patch bump. feat → minor. feat!/BREAKING → major
+#               (capped at minor while pre-1.0 per bump-minor-pre-major).
+#               chore/docs/ci/build/refactor/style/test/revert → no bump.
+# Edit to change: release-please-config.json (which files are bumped, bump
+#                 rules), .release-please-manifest.json (current version).
+# See: docs/release-automation.md → "Cutting a release"
+# ─────────────────────────────────────────────────────────────────────────────
+
 name: release-please
 
 on:
