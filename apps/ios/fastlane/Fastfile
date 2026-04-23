@@ -29,7 +29,13 @@ platform :ios do
 
   desc "Local-only: build without uploading (smoke-test the Fastfile)"
   lane :build_only do
-    build_number = ENV["GITHUB_RUN_NUMBER"] || Time.now.strftime("%Y%m%d%H%M")
+    # Timestamp build number (YYYYMMDDHHMM, 12 digits, well under CFBundleVersion's
+    # 18-digit cap). Always unique and strictly increasing, which App Store Connect
+    # requires within a marketing version. Using GITHUB_RUN_NUMBER caused collisions
+    # when rerunning release.yml after an earlier upload had already reached ASC —
+    # ASC keeps the rejected-binary record and rejects the next upload with the
+    # same build number as "Redundant Binary Upload".
+    build_number = Time.now.strftime("%Y%m%d%H%M")
     build_app(
       project: XCODEPROJ,
       scheme: SCHEME,
@@ -99,7 +105,13 @@ def build_and_upload(distribute_external:, submit_to_app_store:)
   asc_key_path = File.join(Dir.tmpdir, "AuthKey_#{key_id}.p8")
   File.binwrite(asc_key_path, Base64.decode64(key_content_b64))
 
-  build_number = ENV["GITHUB_RUN_NUMBER"] || Time.now.strftime("%Y%m%d%H%M")
+  # Timestamp build number (YYYYMMDDHHMM, 12 digits, well under CFBundleVersion's
+  # 18-digit cap). Always unique and strictly increasing, which App Store Connect
+  # requires within a marketing version. Using GITHUB_RUN_NUMBER caused collisions
+  # when rerunning release.yml after an earlier upload had already reached ASC —
+  # ASC keeps the rejected-binary record and rejects the next upload with the
+  # same build number as "Redundant Binary Upload".
+  build_number = Time.now.strftime("%Y%m%d%H%M")
   marketing_version = read_marketing_version || "1.0"
 
   # clean: false on CI so DerivedData (KMP framework, SwiftPM builds, Swift
