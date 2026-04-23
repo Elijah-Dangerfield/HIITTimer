@@ -44,18 +44,24 @@ jobs:
       github.head_ref != 'release-please--branches--main' &&
       !startsWith(github.event.head_commit.message, 'chore: release') &&
       !contains(github.event.head_commit.message, 'release-please--branches')
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select latest Xcode 16
+      - name: Select latest Xcode 26
+        # Apple rejects uploads built with older SDKs starting 2026-04-28 —
+        # App Store Connect warning 90725 ("This app was built with the iOS
+        # 18.5 SDK. Starting April 28, 2026, all iOS and iPadOS apps must be
+        # built with the iOS 26 SDK or later"). Pinning to the latest 26.x
+        # installed on the runner keeps us on a stable release inside the
+        # required SDK range.
         run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1)
           if [ -z "$XCODE_PATH" ]; then
-            echo "::error::No Xcode 16.x found on runner"
+            echo "::error::No Xcode 26.x found on runner"
             ls /Applications | grep -i xcode
             exit 1
           fi
@@ -74,12 +80,15 @@ jobs:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: Cache Kotlin/Native (~/.konan)
+        # `xcode26-` prefix busts the Xcode 16-era konan cache after moving
+        # the runner to macos-26 — K/N platform libraries are tied to the
+        # SDK headers Xcode ships with.
         uses: actions/cache@v4
         with:
           path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          key: konan-${{ runner.os }}-xcode26-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
-            konan-${{ runner.os }}-
+            konan-${{ runner.os }}-xcode26-
 
       - name: Compile Android + iOS Kotlin targets
         run: ./gradlew :apps:compose:compileDebugKotlinAndroid :apps:compose:compileKotlinIosSimulatorArm64
