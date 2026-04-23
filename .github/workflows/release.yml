@@ -151,7 +151,7 @@ jobs:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.dangerfield.hiittimer
+          packageName: com.dangerfield.hiittimer.HIITTimer
           releaseFiles: ${{ steps.aab.outputs.path }}
           track: production
           status: inProgress
