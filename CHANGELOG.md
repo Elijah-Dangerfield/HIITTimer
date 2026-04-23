@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.3](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.2...v1.0.3) (2026-04-23)
+
+
+### Bug Fixes
+
+* **android:** drop unused CAMERA permission + dead camera scaffolding ([041bddd](https://github.com/Elijah-Dangerfield/HIITTimer/commit/041bddd8e97b496cf788f8fb03a3a572965758c9))
+* **android:** drop unused CAMERA permission + dead camera scaffolding ([6e86cd3](https://github.com/Elijah-Dangerfield/HIITTimer/commit/6e86cd34893349d3930ab322d7f87d2f8220bf8d))
+
 ## [1.0.2](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.1...v1.0.2) (2026-04-23)
 
 
