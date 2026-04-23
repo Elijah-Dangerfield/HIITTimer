@@ -102,6 +102,10 @@ def build_and_upload(distribute_external:, submit_to_app_store:)
   build_number = ENV["GITHUB_RUN_NUMBER"] || Time.now.strftime("%Y%m%d%H%M")
   marketing_version = read_marketing_version || "1.0"
 
+  # clean: false on CI so DerivedData (KMP framework, SwiftPM builds, Swift
+  # .o/.swiftmodule) survives between runs and the cached DerivedData actually
+  # gets reused. Kotlin/Native link is the long pole — avoiding a full rebuild
+  # of ComposeApp.xcframework saves several minutes per release.
   build_app(
     project: XCODEPROJ,
     scheme: SCHEME,
@@ -109,7 +113,7 @@ def build_and_upload(distribute_external:, submit_to_app_store:)
     export_method: "app-store",
     output_directory: OUTPUT_DIR,
     output_name: OUTPUT_NAME,
-    clean: true,
+    clean: false,
     silent: false,
     xcargs: [
       "-allowProvisioningUpdates",

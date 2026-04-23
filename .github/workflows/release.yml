@@ -254,6 +254,12 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # Release fires on tag push (not a branch), so setup-gradle would
+          # otherwise restore-only and not save the Gradle build cache. The
+          # iOS release path is the only job that exercises KMP link tasks,
+          # so if we don't let this run save, the next release starts cold.
+          cache-read-only: false
 
       - name: Cache Kotlin/Native (~/.konan)
         uses: actions/cache@v4
@@ -263,15 +269,27 @@ jobs:
           restore-keys: |
             konan-${{ runner.os }}-
 
-      - name: Cache SwiftPM
+      - name: Cache SwiftPM global store
         uses: actions/cache@v4
         with:
-          path: |
-            ~/Library/Caches/org.swift.swiftpm
-            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
-          key: spm-${{ runner.os }}-${{ hashFiles('apps/ios/iosApp.xcodeproj/project.pbxproj', 'apps/ios/iosApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('apps/ios/iosApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             spm-${{ runner.os }}-
+
+      - name: Cache Xcode DerivedData
+        # Holds KMP framework outputs, resolved SwiftPM packages, Swift .o and
+        # .swiftmodule files, and the precompiled module cache. Combined with
+        # clean: false in the Fastfile, this is what lets incremental builds
+        # actually be incremental on CI. SHA-keyed so each release captures a
+        # fresh snapshot; restore-keys lets fresh runs warm-start from any
+        # prior release.
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-
 
       - name: Set up Ruby / Bundler
         uses: ruby/setup-ruby@v1
@@ -314,6 +332,15 @@ jobs:
             echo
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Pre-build KMP release framework
+        # Runs the same Kotlin/Native link task Xcode will invoke during the
+        # archive (via embedAndSignAppleFrameworkForXcode). Running it first
+        # from a plain Gradle invocation means the Gradle build cache + daemon
+        # are populated by the time xcodebuild delegates to `./gradlew`, so
+        # the Xcode build phase finds the framework UP-TO-DATE instead of
+        # re-linking (the longest step on a cold run).
+        run: ./gradlew :apps:compose:linkReleaseFrameworkIosArm64
 
       - name: Build + release iOS
         working-directory: apps/ios
