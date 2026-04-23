@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.1](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.0...v1.0.1) (2026-04-23)
+
+
+### Bug Fixes
+
+* **android:** align applicationId with Play Console + always upload artifacts ([c19e372](https://github.com/Elijah-Dangerfield/HIITTimer/commit/c19e3721e40d49aed341bd26a7d583c116fe924b))
+* **android:** match Play Console package name + always upload AAB/APK ([e57d846](https://github.com/Elijah-Dangerfield/HIITTimer/commit/e57d846d99a16b4892937c0b0743abec84894c27))
+* **ci:** import Apple Distribution cert from secret so it's reused ([e61d412](https://github.com/Elijah-Dangerfield/HIITTimer/commit/e61d4126a0ebcc8a46908055bdf211377abc83b7))
+* **ci:** reuse Apple Distribution cert across CI runs ([fb2c47c](https://github.com/Elijah-Dangerfield/HIITTimer/commit/fb2c47cd94db412ed1fd0585dc099701d410fda7))
+
 ## [1.0.0](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v0.1.0...v1.0.0) (2026-04-23)
 
 
