@@ -42,11 +42,13 @@ jobs:
   build-and-test:
     name: Build + test
     # release-please's PR only changes versionName + CHANGELOG — it can't break
-    # the build. Skip the expensive macOS run on that branch. The merge commit
-    # into main is also a pure bump, so skip it there too.
+    # the build. Skip the expensive macOS run on that branch AND on its merge
+    # commit into main (squash = "chore: release …", merge commit = "Merge
+    # pull request #N from …/release-please--branches--main").
     if: >
       github.head_ref != 'release-please--branches--main' &&
-      !startsWith(github.event.head_commit.message, 'chore: release')
+      !startsWith(github.event.head_commit.message, 'chore: release') &&
+      !contains(github.event.head_commit.message, 'release-please--branches')
     runs-on: macos-15
     timeout-minutes: 45
 
@@ -100,7 +102,8 @@ jobs:
     if: >
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      !startsWith(github.event.head_commit.message, 'chore: release')
+      !startsWith(github.event.head_commit.message, 'chore: release') &&
+      !contains(github.event.head_commit.message, 'release-please--branches')
     needs: build-and-test
     runs-on: macos-15
     timeout-minutes: 60
