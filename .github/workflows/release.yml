@@ -101,6 +101,17 @@ jobs:
         with:
           ref: ${{ needs.resolve-tag.outputs.tag }}
 
+      - name: Read applicationId from versions.properties
+        id: app_id
+        run: |
+          APP_ID=$(grep '^applicationId=' versions.properties | cut -d= -f2 | tr -d ' ')
+          if [ -z "$APP_ID" ]; then
+            echo "::error::Could not read applicationId from versions.properties"
+            exit 1
+          fi
+          echo "Using applicationId: $APP_ID"
+          echo "value=$APP_ID" >> "$GITHUB_OUTPUT"
+
       - name: Verify Android signing secrets
         run: |
           missing=0
@@ -151,7 +162,7 @@ jobs:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.dangerfield.hiittimer.HIITTimer
+          packageName: ${{ steps.app_id.outputs.value }}
           releaseFiles: ${{ steps.aab.outputs.path }}
           track: production
           status: inProgress
