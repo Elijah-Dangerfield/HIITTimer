@@ -104,35 +104,6 @@ reason to keep coming back beyond the timer itself.
 stats page UI (3 days), badge system + ~30 challenges (4 days), finished-screen
 reveal animation (1 day).
 
-## "Rings" / "Rounds" visual theme and rename
-
-Lean into a circular motif across the whole app. Give the product a distinct
-visual identity instead of generic dark-mode cards.
-
-**Shape of the rebrand:**
-- Rename to "Rings" or "Rounds" (both support the circular motif and map to
-  interval training vocabulary — "round" especially).
-- Timer list becomes a grid of squarish cards (2-column on phones) instead
-  of a single-column list. Denser, more glanceable.
-- Each card shows a circular arc as the block preview instead of the current
-  linear bar — interval segments arranged around the ring, colored by type.
-- Runner screen uses a ring as the primary countdown visual (if it doesn't
-  already) — same visual language as the card.
-- Finished screen and stats badges both lean on the ring shape for visual
-  cohesion.
-- App icon: concentric rings.
-
-**Open questions:**
-- Does the name actually change, or is "Rings" just an internal theme name?
-  Renaming a shipped app is a bigger commitment (ASO, user recognition).
-- Are the cards pure square (tile grid) or rounded-rect? Square reads more
-  like app icons, rounded-rect keeps more info density.
-- How does the grid degrade at large list sizes — still 2 columns, or scale
-  to 3 on tablets / landscape?
-
-**Effort:** 1 week. Most of the work is the card redesign and the circular
-arc block preview; the rename itself is cheap if we decide to do it.
-
 ## Apple Watch / Wear OS companion
 
 Run timers from the wrist. Major differentiator for a fitness app.
@@ -166,3 +137,50 @@ etc. via the system share sheet.
 
 **Effort:** 1–2 days. Bulk of the work is the platform glue for Compose →
 image, not the design of the card.
+
+## Multiple rounds per workout
+
+Today a workout has one implicit "cycle group" — blocks tagged `Cycle` repeat
+together `cycleCount` times, wrapped by optional warmup/cooldown blocks.
+Allow users to create multiple rounds, each with its own block list and
+repeat count. Example: Round 1 (squat, push-up, plank × 3) then Round 2
+(burpee, rest × 5).
+
+**Data model:**
+- Introduce a `Round` (id, name, repeatCount, List<Block>). Timer becomes
+  `List<Round>`. Drop `BlockRole` or keep only as a UI hint.
+- Room migration: each existing timer's `Cycle` blocks wrap into one Round
+  with `repeatCount = cycleCount`; warmup/cooldown become Rounds with
+  `repeatCount = 1`. Once-only, non-reversible — schema version bump.
+
+**Decisions to make before coding:**
+- **Unify warmup/cooldown into rounds** (warmup = round with `repeatCount 1`)
+  vs **keep separate**. Unifying is more flexible (any round can be
+  non-repeating, any position); separate preserves the current 3-zone mental
+  model. Lean unify.
+- **Runner screen cognitive load.** Multi-round adds a layer to the progress
+  display ("Round 2 of 3, block 3 of 5, rep 2 of 4"). Decide whether to show
+  full nesting or collapse to "current block + overall %". Must feel calm
+  mid-workout.
+- **Reordering within vs across rounds.** Drag-reorder blocks across round
+  boundaries is fiddly UX — sketch before building.
+
+**UX — progressive disclosure:**
+- Today's experience is unchanged for 1-round workouts. One round shown, no
+  extra chrome.
+- Below the blocks, a `+ Add round` affordance. Tapping creates a new round
+  section with its own repeat counter.
+- Round name defaults to "Round 1", "Round 2", renameable. Names surface as
+  runner-screen cues.
+- Soft caps (5 rounds / 20 blocks per round) to keep the list usable.
+- First time a user opens the edit screen post-update, show a dismissible
+  one-liner ("You can now add multiple rounds"). No modal, no tutorial video.
+
+**Also update:**
+- `StarterTimersSeeder` — ship at least one multi-round starter template to
+  showcase the feature day one.
+- Total-duration math across list/detail/share cards.
+- "What's New" copy for the release that ships this.
+
+**Effort:** ~1 focused day. Data model + migration is rote; the time goes
+into the nested-list edit UX and the runner-screen redesign.
