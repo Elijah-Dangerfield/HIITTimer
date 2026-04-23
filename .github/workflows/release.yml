@@ -168,10 +168,8 @@ jobs:
           status: inProgress
           userFraction: 0.10
           whatsNewDirectory: apps/compose/build/play-release-notes
-          # mappingFile / debugSymbols intentionally omitted:
-          #   - R8/ProGuard is disabled (isMinifyEnabled = false), so no mapping.txt.
-          #   - No native (.so) libraries are shipped, so no debug symbols.
-          # If R8 is enabled later, restore mappingFile.
+          mappingFile: apps/compose/build/outputs/mapping/release/mapping.txt
+          # debugSymbols omitted — no native (.so) libraries are shipped.
 
       - name: Warn on missing Play credentials
         if: ${{ !inputs.skip_play_store && env.PLAY_SERVICE_ACCOUNT_JSON == '' }}
