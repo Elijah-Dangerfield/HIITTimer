@@ -114,6 +114,29 @@ Set under **Settings → Secrets and variables → Actions**. Secrets are encryp
 
 - `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_BASE64`
 
+### Needed for iOS releases (cert reuse)
+
+| Name | Kind | Value |
+|---|---|---|
+| `APPLE_DIST_CERT_P12_BASE64` | secret | Base64 of your exported Apple Distribution .p12 (cert + private key). |
+| `APPLE_DIST_CERT_PASSWORD` | secret | The password set when exporting the .p12. |
+
+Without these, Xcode's automatic signing creates a new Apple Distribution cert on every CI run and eventually hits the team cap (~2–3 per type). With them, every run imports the same cert into a temp keychain and reuses it forever.
+
+**One-time setup:**
+
+1. On your Mac, open **Xcode → Settings → Accounts → [your team] → Manage Certificates** (or **Keychain Access**).
+2. Find or create an "Apple Distribution: *your name* (TEAMID)" cert.
+3. Right-click → **Export → Personal Information Exchange (.p12)** → set a password → save it (e.g. `~/apple-dist.p12`).
+4. Base64 and stash:
+   ```sh
+   base64 -i ~/apple-dist.p12 | gh secret set APPLE_DIST_CERT_P12_BASE64
+   gh secret set APPLE_DIST_CERT_PASSWORD    # paste the password you chose
+   rm ~/apple-dist.p12                        # delete the local .p12
+   ```
+
+The cert is valid for ~1 year — when it expires, re-export and update the secret.
+
 ### Needed for Android production releases
 
 | Name | Kind | Value |

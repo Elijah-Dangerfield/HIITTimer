@@ -1,7 +1,10 @@
 require "base64"
+require "securerandom"
 require "tmpdir"
 
 default_platform(:ios)
+
+CI_KEYCHAIN_NAME = "rounds_build_keychain"
 
 XCODEPROJ = "iosApp.xcodeproj"
 SCHEME = "iosApp"
@@ -46,6 +49,40 @@ def build_and_upload(distribute_external:, submit_to_app_store:)
   key_id = ENV.fetch("ASC_KEY_ID")
   issuer_id = ENV.fetch("ASC_ISSUER_ID")
   key_content_b64 = ENV.fetch("ASC_KEY_P8_BASE64")
+
+  # In CI, import the Apple Distribution cert from a stored .p12 so Xcode
+  # reuses it instead of creating a new cert on every run (Apple caps
+  # distribution certs at 2–3 per team; ephemeral runners blow through them).
+  # Locally this block is a no-op — developers use their own keychain.
+  keychain_created = false
+  if ENV["CI"] && ENV["APPLE_DIST_CERT_P12_BASE64"] && !ENV["APPLE_DIST_CERT_P12_BASE64"].empty?
+    keychain_password = SecureRandom.hex(16)
+    create_keychain(
+      name: CI_KEYCHAIN_NAME,
+      password: keychain_password,
+      default_keychain: true,
+      unlock: true,
+      timeout: 3600,
+      add_to_search_list: true,
+      lock_when_sleeps: false,
+    )
+    keychain_created = true
+    p12_path = File.join(Dir.tmpdir, "apple_dist.p12")
+    File.binwrite(p12_path, Base64.decode64(ENV.fetch("APPLE_DIST_CERT_P12_BASE64")))
+    import_certificate(
+      certificate_path: p12_path,
+      certificate_password: ENV.fetch("APPLE_DIST_CERT_PASSWORD"),
+      keychain_name: CI_KEYCHAIN_NAME,
+      keychain_password: keychain_password,
+    )
+    File.delete(p12_path) if File.exist?(p12_path)
+  elsif ENV["CI"]
+    UI.important(
+      "APPLE_DIST_CERT_P12_BASE64 is not set — Xcode will create a new " \
+      "Apple Distribution cert on this run. Eventually hits the team cap. " \
+      "See docs/release-automation.md → Apple signing."
+    )
+  end
 
   api_key = app_store_connect_api_key(
     key_id: key_id,
@@ -128,6 +165,13 @@ def build_and_upload(distribute_external:, submit_to_app_store:)
   upload_sentry_release(marketing_version, build_number)
 ensure
   File.delete(asc_key_path) if defined?(asc_key_path) && asc_key_path && File.exist?(asc_key_path)
+  if defined?(keychain_created) && keychain_created
+    begin
+      delete_keychain(name: CI_KEYCHAIN_NAME)
+    rescue => e
+      UI.important("Failed to delete keychain #{CI_KEYCHAIN_NAME}: #{e.message}")
+    end
+  end
 end
 
 def read_marketing_version
