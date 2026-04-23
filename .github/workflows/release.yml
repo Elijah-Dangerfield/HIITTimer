@@ -182,19 +182,21 @@ jobs:
           npx --yes @sentry/cli releases finalize "$RELEASE"
 
       - name: Upload AAB artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-aab
           path: apps/compose/build/outputs/bundle/release/*.aab
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
 
       - name: Upload APK artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: apps/compose/build/outputs/apk/release/*.apk
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
 
   ios:

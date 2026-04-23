@@ -108,7 +108,10 @@ class ApplicationConventionPlugin : Plugin<Project> {
 
     private fun Project.configureAppBuildConfig(metadata: VersionMetadata) {
         extensions.configure(BuildConfigExtension::class.java) {
-            packageName("${metadata.applicationId}.appconfig")
+            // Kotlin package for the generated BuildConfig class — independent
+            // of Android applicationId so renaming the applicationId doesn't
+            // break import paths in the app.
+            packageName("com.dangerfield.hiittimer.appconfig")
             className("AppBuildConfig")
             useKotlinOutput {
                 internalVisibility = false
