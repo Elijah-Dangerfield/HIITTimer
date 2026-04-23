@@ -99,17 +99,38 @@ dialog<DialogRoute> { backStackEntry, dialogState -> ... }
 
 Every PR title must be a conventional commit. PRs are squash-merged, so the title becomes the commit message, and [release-please](https://github.com/googleapis/release-please) derives the next version bump from commit types.
 
-| Prefix | Version bump | Use for |
-|---|---|---|
-| `fix:` | patch (0.1.0 → 0.1.1) | Bug fixes |
-| `feat:` | minor (0.1.0 → 0.2.0) | New user-facing features |
-| `feat!:` or trailer `BREAKING CHANGE:` | major (0.1.0 → 1.0.0) | Breaking changes |
-| `perf:` | patch | Performance improvements |
-| `refactor:`, `docs:`, `style:`, `test:`, `build:`, `ci:`, `chore:` | none | Everything else (still allowed) |
+### Decision: which type?
 
-Subject starts with a lowercase letter and describes the end-user effect, not the implementation. Enforced in two places:
-- **Locally** via `.githooks/commit-msg` — run `./scripts/install_hooks.sh` once per clone. The first Gradle build will fail until the hook is installed.
-- **On PRs** via the `commitlint.yml` workflow (squash-merged PR titles).
+**The question to ask: will a user see the effect of this change if they update the app?**
+
+| Answer | Type | Version bump | Release notes |
+|---|---|---|---|
+| Yes, it's a new capability | `feat:` | minor | "Features" |
+| Yes, and it's breaking | `feat!:` or `BREAKING CHANGE:` trailer | major (capped at minor pre-1.0) | prominently |
+| Yes, it's a bug in the shipped app | `fix:` | patch | "Bug Fixes" |
+| Yes, it's faster/smoother | `perf:` | patch | "Performance" |
+| No — CI workflow change | `ci:` | none | omitted |
+| No — build config, Gradle plugin, R8, fastlane, versions | `build:` | none | omitted |
+| No — repo housekeeping, doc edits, test changes, internal refactors | `chore:`, `docs:`, `test:`, `refactor:`, `style:` | none | omitted |
+
+### Worked examples
+
+| Change | Right type | Why |
+|---|---|---|
+| Fix crash when user taps "Start" with no blocks | `fix:` | User-visible bug |
+| Add Apple Watch companion | `feat:` | New user capability |
+| Swap internal architecture of timer engine, no behavior change | `refactor:` | User sees nothing |
+| Fix Play Console upload path in release.yml | `ci:` | CI plumbing; users don't see it |
+| Bump Kotlin compiler version | `build:` | Build system; no runtime effect |
+| Enable R8 minification on release builds | `build:` | Build config; invisible to user (unless something breaks, in which case hotfix with `fix:`) |
+| Rewrite README | `docs:` | Documentation |
+| Add a new Sentry triage prompt | `ci:` | Automation config |
+
+### Enforcement (two gates, both automatic)
+
+- **Locally**: `.githooks/commit-msg` rejects non-Conventional-Commit messages. Also **warns** when a `fix:`/`feat:`/`perf:` commit only touched CI/build/docs files (likely a typing mistake). Run `./scripts/install_hooks.sh` once per clone — the first Gradle build fails until the hook is installed.
+- **After each commit**, `.githooks/post-commit` prints a one-line recap of what release-please will do with it (e.g. `» fix: patch bump. Goes under 'Bug Fixes' in release notes.`).
+- **On PRs**: the `commitlint.yml` workflow re-validates the squash-merge commit title.
 
 ## Automation routines
 
