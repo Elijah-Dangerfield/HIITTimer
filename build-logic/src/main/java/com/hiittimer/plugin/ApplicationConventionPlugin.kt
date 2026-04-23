@@ -93,7 +93,12 @@ class ApplicationConventionPlugin : Plugin<Project> {
                         applicationIdSuffix = ".debug"
                     }
                     release {
-                        isMinifyEnabled = false
+                        isMinifyEnabled = true
+                        isShrinkResources = true
+                        proguardFiles(
+                            getDefaultProguardFile("proguard-android-optimize.txt"),
+                            project.file("proguard-rules.pro"),
+                        )
                         signingConfig = releaseSigning ?: signingConfigs.getByName("debug")
                     }
                 }
