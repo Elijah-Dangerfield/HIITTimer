@@ -10,7 +10,7 @@ HIIT Timer ships to the App Store and Play Store with no human clicks after one-
 
 1. There is always (well — whenever there are new `fix:`/`feat:`/`perf:` commits on main) an open PR titled **`chore(main): release vX.Y.Z`**, opened automatically by the release-please bot. It contains the version bump + changelog.
 2. **Merge that PR.** release-please creates the `vX.Y.Z` tag + GitHub Release.
-3. The tag push triggers [release.yml](../.github/workflows/release.yml):
+3. release-please.yml then dispatches [release.yml](../.github/workflows/release.yml) for that tag (it can't rely on the tag-push trigger — GitHub's default `GITHUB_TOKEN` deliberately doesn't cascade workflow triggers). release.yml:
    - Android → Play Console production track, 10% staged rollout
    - iOS → TestFlight external group "main" → submitted to App Store review with Apple's built-in phased release
 4. Apple review (1–3 days) and Play review (few hours) approve. Builds roll out automatically.
@@ -76,6 +76,8 @@ main ─── push ──► release-please (bot) maintains open "release vX.Y.
                         ▼ merge
                  tag v*, GitHub Release
                         │
+                        │ release-please.yml dispatches release.yml
+                        │ (GITHUB_TOKEN doesn't cascade tag triggers)
                         ▼
                  release.yml ── Android AAB ──► Play production (10% staged)
                              ── iOS IPA ─────► TestFlight "main" external
@@ -93,7 +95,7 @@ rollouts. Halt manually if crash-free rate tanks.
 | [ci.yml](../.github/workflows/ci.yml) | PRs, push to main | Compile + tests. On main push: TestFlight internal preview. Skipped on release-please's PR and its merge commit (bumps-only changes can't break the build). |
 | [commitlint.yml](../.github/workflows/commitlint.yml) | PRs | Rejects non-conventional PR titles. |
 | [release-please.yml](../.github/workflows/release-please.yml) | push to main | Maintains the release PR, creates tag + GH Release on merge. |
-| [release.yml](../.github/workflows/release.yml) | tag `v*`, workflow_dispatch | Full production release to both stores. |
+| [release.yml](../.github/workflows/release.yml) | dispatched by release-please.yml after tag creation; also `workflow_dispatch` with an explicit tag for re-runs; also fires on tag pushes made by a human | Full production release to both stores. |
 | [auto-merge.yml](../.github/workflows/auto-merge.yml) | PR labeled `ai-autofix` | Enables GitHub auto-merge. |
 
 Sentry triage is not a workflow — it runs as a Claude Code routine on the maintainer's machine. See [scripts/prompts/sentry-triage.md](../scripts/prompts/sentry-triage.md).
@@ -183,7 +185,7 @@ Marketing/landing pages (`index.html`, `privacy.html`, `terms.html`, `style.css`
 | `release.yml` Android job: Play upload skipped with warning | `PLAY_SERVICE_ACCOUNT_JSON` is empty or malformed. |
 | Apple rejects submission | Usually metadata or privacy-related. Fix in App Store Connect — the binary is already uploaded, resubmit from ASC, no rebuild. |
 | Crash-free rate spikes after release | Halt phased rollout manually: App Store Connect → your app → Phased Release → **Pause Rollout**. Play Console → Production → **Halt rollout**. Ship a fix via normal flow; next release supersedes. |
-| Tag pushed but release.yml didn't fire | Tag doesn't match `v*`, or the workflow is disabled. |
+| Tag created but release.yml didn't fire | release-please.yml failed at the dispatch step (check its run). Manual remediation: Actions → Release → Run workflow → enter the tag. If a human pushed the tag (not release-please), the push trigger would have fired it — if that's not the case, the `v*` prefix is probably wrong. |
 | AI triage PR failed CI | Check the PR — if the fix is wrong, close it. `ai-autofix` PRs don't auto-merge without green CI. |
 
 ## Extending the pipeline
