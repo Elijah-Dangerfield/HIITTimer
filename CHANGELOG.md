@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.1...v1.0.2) (2026-04-23)
+
+
+### Bug Fixes
+
+* **ci:** Play upload packageName matches registered app ([453722b](https://github.com/Elijah-Dangerfield/HIITTimer/commit/453722b9e74b950bda04d6508ec8f8ac4d39fe33))
+* **ci:** Play upload packageName now matches the registered app ([ada01a3](https://github.com/Elijah-Dangerfield/HIITTimer/commit/ada01a3b5ab19880eea06efa1c4cadac4962b72e))
+
 ## [1.0.1](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.0...v1.0.1) (2026-04-23)
 
 
