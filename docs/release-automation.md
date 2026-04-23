@@ -54,14 +54,9 @@ Each run:
 
 **To pause triage entirely**: disable the routine in Claude Code. No CI to touch.
 
-### Post-release safety net
+### Post-release monitoring
 
-[rollout-guard.yml](../.github/workflows/rollout-guard.yml) runs every 30 minutes. It queries Sentry's crash-free-session rate on the latest production release. If it falls below 99.5% over 24h, it:
-
-1. Calls the App Store Connect API to **pause Apple's phased release** (via [scripts/halt_asc_phased_release.sh](../scripts/halt_asc_phased_release.sh)).
-2. Opens a P0 issue labeled `rollout-regression,ai-autofix`, which will be picked up by next week's triage run (or triggers one manually).
-
-Play Store staged rollout isn't paused automatically — bump the `userFraction` down in Play Console or halt it there by hand. (Google doesn't expose a pause API the same way Apple does.)
+There's no automated rollout guard. Apple's built-in phased release (7-day gradual rollout from 1% → 100%) and Play's staged rollout (10% initial) give you a safety window. For detection, configure Sentry's native alerting (Sentry → Alerts → create a rule on *crash-free sessions* below 99% for the relevant project) and halt manually in App Store Connect / Play Console when needed.
 
 ---
 
@@ -86,9 +81,9 @@ main ─── push ──► release-please (bot) maintains open "release vX.Y.
                              ── iOS IPA ─────► TestFlight "main" external
                              ── App Store ──► submit + phased rollout
                              ── Sentry ─────► create release + upload mappings
-                        │
-                        ▼ every 30 min
-                 rollout-guard ── Sentry crash-free rate ──► halt phased if <99.5%
+
+Post-release: Sentry's own alerting + App Store / Play's native phased
+rollouts. Halt manually if crash-free rate tanks.
 ```
 
 ## Workflows at a glance
@@ -100,7 +95,6 @@ main ─── push ──► release-please (bot) maintains open "release vX.Y.
 | [release-please.yml](../.github/workflows/release-please.yml) | push to main | Maintains the release PR, creates tag + GH Release on merge. |
 | [release.yml](../.github/workflows/release.yml) | tag `v*`, workflow_dispatch | Full production release to both stores. |
 | [auto-merge.yml](../.github/workflows/auto-merge.yml) | PR labeled `ai-autofix` | Enables GitHub auto-merge. |
-| [rollout-guard.yml](../.github/workflows/rollout-guard.yml) | dispatched by release.yml on success | Halts rollout on crash spike. |
 
 Sentry triage is not a workflow — it runs as a Claude Code routine on the maintainer's machine. See [scripts/prompts/sentry-triage.md](../scripts/prompts/sentry-triage.md).
 
@@ -137,7 +131,7 @@ keytool -genkey -v -keystore hiittimer-upload.p12 -storetype PKCS12 \
 
 Keep the `.p12` in 1Password **and** on disk. Losing both = you can never update the Play Store listing. Ever.
 
-### Needed for Sentry release tracking + rollout guard
+### Needed for Sentry release tracking
 
 | Name | Kind | Value |
 |---|---|---|
@@ -145,7 +139,7 @@ Keep the `.p12` in 1Password **and** on disk. Losing both = you can never update
 | `SENTRY_ORG` | variable | Sentry org slug (from https://sentry.io/settings/). |
 | `SENTRY_PROJECT` | variable | Sentry project slug. |
 
-All three empty = Sentry integration no-ops (releases aren't created, rollout-guard skips). The pipeline otherwise runs fine.
+All three empty = Sentry release creation is skipped; the pipeline otherwise runs fine.
 
 ### Play service account — one-time setup
 
@@ -188,7 +182,7 @@ Marketing/landing pages (`index.html`, `privacy.html`, `terms.html`, `style.css`
 | `release.yml` Android job: keystore missing | One of the `ANDROID_*` secrets is empty. |
 | `release.yml` Android job: Play upload skipped with warning | `PLAY_SERVICE_ACCOUNT_JSON` is empty or malformed. |
 | Apple rejects submission | Usually metadata or privacy-related. Fix in App Store Connect — the binary is already uploaded, resubmit from ASC, no rebuild. |
-| rollout-guard opened a P0 issue | Phased release is already paused. Ship a fix via normal flow; next release supersedes. |
+| Crash-free rate spikes after release | Halt phased rollout manually: App Store Connect → your app → Phased Release → **Pause Rollout**. Play Console → Production → **Halt rollout**. Ship a fix via normal flow; next release supersedes. |
 | Tag pushed but release.yml didn't fire | Tag doesn't match `v*`, or the workflow is disabled. |
 | AI triage PR failed CI | Check the PR — if the fix is wrong, close it. `ai-autofix` PRs don't auto-merge without green CI. |
 

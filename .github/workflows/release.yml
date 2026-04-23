@@ -16,8 +16,6 @@
 #                           phased release enabled, creates Sentry release +
 #                           uploads dSYMs. Uploads IPA artifact.
 #   attach-artifacts      — attaches all platform binaries to the GH Release.
-#   trigger-rollout-guard — dispatches rollout-guard.yml to start monitoring
-#                           crash-free session rate for this release.
 #
 # Side effects: HUGE. Real builds go to TestFlight external testers and into
 #               the App Store review queue; Android goes to Play production
@@ -359,18 +357,3 @@ jobs:
             artifacts/android-apk/*.apk
             artifacts/ios-ipa/*.ipa
           fail_on_unmatched_files: false
-
-  trigger-rollout-guard:
-    name: Arm rollout guard
-    needs: [resolve-tag, android, ios]
-    if: success()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dispatch rollout guard
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run rollout-guard.yml \
-            -f tag="${{ needs.resolve-tag.outputs.tag }}" \
-            -f build_number="${{ github.run_number }}" \
-            --repo "$GITHUB_REPOSITORY"

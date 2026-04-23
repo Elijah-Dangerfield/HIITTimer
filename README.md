@@ -137,7 +137,7 @@ See [Swift-Kotlin Communication Patterns](docs/swift-kotlin-communication-patter
 
 Cutting a release is merging one PR. release-please maintains an open `chore(main): release vX.Y.Z` PR with the version bump + changelog; merging it tags, builds both platforms, and submits to the stores. PR titles must be conventional commits (`fix:`, `feat:`, `feat!:`) — the type picks the version bump.
 
-See [docs/release-automation.md](docs/release-automation.md) for the full pipeline (CI, Sentry triage, rollout guard, secrets) and [AGENTS.md](AGENTS.md#conventional-commits-required) for the commit convention.
+See [docs/release-automation.md](docs/release-automation.md) for the full pipeline (CI, Sentry triage, secrets) and [AGENTS.md](AGENTS.md#conventional-commits-required) for the commit convention.
 
 ## Key Files
 
