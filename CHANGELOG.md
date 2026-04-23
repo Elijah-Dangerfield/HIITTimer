@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.4](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.3...v1.0.4) (2026-04-23)
+
+
+### Bug Fixes
+
+* **ci:** drop mappingFile + debugSymbols from Play upload ([018c5e9](https://github.com/Elijah-Dangerfield/HIITTimer/commit/018c5e9b3bb77e2fe23ea645e432589f14600d61))
+* **ci:** drop nonexistent mappingFile + debugSymbols from Play upload ([267b997](https://github.com/Elijah-Dangerfield/HIITTimer/commit/267b9973a32c3edc7fa7df05c7198084203d0b0e))
+
 ## [1.0.3](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.2...v1.0.3) (2026-04-23)
 
 
