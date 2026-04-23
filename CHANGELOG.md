@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.0...v1.0.1) (2026-04-23)
+
+
+### Bug Fixes
+
+* **ios:** strip app icon alpha + use timestamp build number ([6e70adc](https://github.com/Elijah-Dangerfield/HIITTimer/commit/6e70adc68f31faccd94cdc0a5883b857bf5fc66d))
+* **ios:** strip app icon alpha + use timestamp build number ([6332ba9](https://github.com/Elijah-Dangerfield/HIITTimer/commit/6332ba9bbfc547a07f45f7afddf4fb3d1e2fc8a4))
+
 ## [1.0.0](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v0.1.0...v1.0.0) (2026-04-23)
 
 
