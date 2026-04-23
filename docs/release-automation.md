@@ -92,7 +92,7 @@ rollouts. Halt manually if crash-free rate tanks.
 
 | Workflow | Fires on | What it does |
 |---|---|---|
-| [ci.yml](../.github/workflows/ci.yml) | PRs, push to main | Compile + tests. On main push: TestFlight internal preview. Skipped on release-please's PR and its merge commit (bumps-only changes can't break the build). |
+| [ci.yml](../.github/workflows/ci.yml) | PRs, push to main | Compile + tests. No uploads — shipping happens via release.yml. Skipped on release-please's PR and its merge commit (bumps-only changes can't break the build). |
 | [commitlint.yml](../.github/workflows/commitlint.yml) | PRs | Rejects non-conventional PR titles. |
 | [release-please.yml](../.github/workflows/release-please.yml) | push to main | Maintains the release PR, creates tag + GH Release on merge. |
 | [release.yml](../.github/workflows/release.yml) | dispatched by release-please.yml after tag creation; also `workflow_dispatch` with an explicit tag for re-runs; also fires on tag pushes made by a human | Full production release to both stores. |
