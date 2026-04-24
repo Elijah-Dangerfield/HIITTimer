@@ -53,12 +53,45 @@ private class AndroidAudioCuePlayer(
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build()
 
+    // Tracks the most recent focus state the system told us about. Used by
+    // the telemetry in play() so the Sentry breadcrumb on a silent-play
+    // failure shows whether focus was already lost before we tried.
+    @Volatile
+    private var lastKnownFocusChange: Int = AudioManager.AUDIOFOCUS_GAIN
+
+    private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { change ->
+        lastKnownFocusChange = change
+        when (change) {
+            AudioManager.AUDIOFOCUS_GAIN -> logger.i { scope ->
+                scope.tag("audio_event", "focus_gain")
+                "Audio focus regained"
+            }
+            AudioManager.AUDIOFOCUS_LOSS -> logger.w { scope ->
+                scope.tag("audio_event", "focus_loss_permanent")
+                "Audio focus lost permanently — next cue will be silent until reacquired"
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> logger.i { scope ->
+                scope.tag("audio_event", "focus_loss_transient")
+                "Audio focus lost transiently"
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> logger.i { scope ->
+                scope.tag("audio_event", "focus_loss_transient_duck")
+                "Audio focus lost but can duck"
+            }
+            else -> logger.i { scope ->
+                scope.tag("audio_event", "focus_change_unknown")
+                scope.extra("change", change)
+                "Audio focus change with unknown code"
+            }
+        }
+    }
+
     private val focusRequest: AudioFocusRequest? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
                 .setAudioAttributes(focusAttributes)
                 .setWillPauseWhenDucked(false)
-                .setOnAudioFocusChangeListener({ })
+                .setOnAudioFocusChangeListener(focusChangeListener)
                 .build()
         } else {
             null
@@ -164,15 +197,23 @@ private class AndroidAudioCuePlayer(
 
     private fun requestDucking(holdMs: Long) {
         handler.removeCallbacks(abandonFocus)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && focusRequest != null) {
+        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && focusRequest != null) {
             audioManager.requestAudioFocus(focusRequest)
         } else {
             @Suppress("DEPRECATION")
             audioManager.requestAudioFocus(
-                null,
+                focusChangeListener,
                 AudioManager.STREAM_MUSIC,
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
             )
+        }
+        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            logger.e { scope ->
+                scope.tag("audio_event", "focus_request_failed")
+                scope.extra("result", result)
+                scope.extra("last_focus_change", lastKnownFocusChange)
+                "requestAudioFocus did not return GRANTED (likely silent cue)"
+            }
         }
         handler.postDelayed(abandonFocus, holdMs)
     }
@@ -205,7 +246,15 @@ private class AndroidAudioCuePlayer(
             return
         }
         if (id in loadedIds) {
-            soundPool.play(id, volume, volume, 1, 0, 1f)
+            val streamId = soundPool.play(id, volume, volume, 1, 0, 1f)
+            if (streamId == 0) {
+                logger.e { scope ->
+                    scope.tag("audio_event", "sound_pool_play_failed")
+                    scope.extra("cue", cue::class.simpleName ?: "unknown")
+                    scope.extra("last_focus_change", lastKnownFocusChange)
+                    "SoundPool.play returned 0 (silent cue)"
+                }
+            }
         } else {
             pendingPlay = id
         }
