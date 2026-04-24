@@ -51,28 +51,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select latest stable Xcode 26
-        # Apple rejects uploads built with older SDKs starting 2026-04-28 —
-        # App Store Connect warning 90725 ("This app was built with the iOS
-        # 18.5 SDK. Starting April 28, 2026, all iOS and iPadOS apps must
-        # be built with the iOS 26 SDK or later"). We pin to the latest
-        # non-beta 26.x on the runner. `grep -iv beta` skips Xcode_26.5_beta
-        # etc. — prereleases on GitHub runners typically ship without
-        # matching simulator SDKs, which fails xcodebuild with
-        # "iOS X.Y is not installed" (that exact failure took down the
-        # first retag of v1.0.1).
+      - name: Select runner's default Xcode
+        # Don't try to out-clever the runner image. /Applications/Xcode.app
+        # is the default stable that GitHub's macos-26 image explicitly
+        # picks (26.2 as of April 2026), and the image team guarantees its
+        # iOS platform support is installed. Prerelease Xcodes like
+        # /Applications/Xcode_26.5.0.app ship as separate bundles with
+        # platform support missing, which breaks xcodebuild archive with
+        # "iOS 26.5 is not installed". A naive "pick the highest Xcode_*"
+        # script picks exactly that bundle (the 'beta' suffix in the path
+        # name is gone since mid-2026), which took down two v1.0.1 retags.
+        # Using the default sidesteps the whole pick-a-version problem.
         run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null \
-            | grep -iv beta \
-            | sort -V \
-            | tail -n 1)
-          if [ -z "$XCODE_PATH" ]; then
-            echo "::error::No stable Xcode 26.x found on runner"
-            ls /Applications | grep -i xcode
+          if [ ! -d /Applications/Xcode.app ]; then
+            echo "::error::/Applications/Xcode.app is missing on runner"
+            ls /Applications | grep -i xcode || true
             exit 1
           fi
-          echo "Using $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH"
+          sudo xcode-select -s /Applications/Xcode.app
+          echo "Using /Applications/Xcode.app"
           xcodebuild -version
 
       - name: Set up JDK 21
