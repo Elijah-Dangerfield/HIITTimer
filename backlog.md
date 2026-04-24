@@ -1,6 +1,8 @@
-# Future features
+# Backlog
 
-Ideas worth building, not scheduled.
+Ideas worth building, not scheduled. Grouped loosely: user-facing
+features, reliability / observability fixes, CI and release
+infrastructure.
 
 ## Stats, badges, and challenges page
 
@@ -254,3 +256,115 @@ framework at all when Kotlin sources haven't changed.
   provisioning issues before the tag is cut. Effort: a small workflow
   that builds the iOS archive without uploading, run on the
   release-please PR so broken releases never get merged.
+
+## Release pipeline — smooth the retag dance
+
+See `docs/branching-and-release-strategy.md` for why we stay on trunk
+and retag on Apple rejections. These items reduce that ritual from
+three manual steps to one.
+
+**One-shot `retag-release` workflow_dispatch.**
+- New workflow (or new inputs on release.yml) that takes a version
+  string, does `gh release delete --cleanup-tag`, creates the tag at
+  the current `origin/main`, and fires release.yml with
+  `skip_play_store: true`. Replaces: manual delete + manual retag +
+  cancel auto-triggered run + redispatch.
+- Effort: ~30 lines of YAML + a shell step. Needs `contents: write`
+  permission.
+
+**Make `skip_play_store` respected on tag-push runs.**
+- Today, only `workflow_dispatch` sees `skip_play_store`. Tag-push
+  always runs Android + Play. That's why a retag needs the cancel +
+  redispatch dance.
+- Option A: read a repo variable (e.g. `vars.SKIP_PLAY_STORE_NEXT`) in
+  the android job's `if:` — set before tag push, unset after.
+- Option B: tag-name convention — `v1.0.1-ios` skips Play, `v1.0.1`
+  ships both. Ugly but no manual toggle.
+- Option C: annotated-tag message convention — parse the tag message
+  for `skip-play-store` and branch on it.
+- Lean A. Smallest footprint, signal lives in repo state rather than
+  in tag soup. Combined with the retag action above, the ritual
+  becomes: click one button in Actions.
+
+**Release-please dry-run action.**
+- `workflow_dispatch` that runs release-please with `--dry-run` and
+  posts the planned version + changelog as a comment on the workflow
+  run. Catches "oh, it's going to propose 1.0.2 when I wanted a 1.0.1
+  resubmit" before merging the release-please PR.
+- Effort: one workflow step + a comment poster.
+
+## Reliability / observability
+
+**Audio cues die when another app takes over audio in the background (iOS + Android).**
+
+Repro: start timer → background app → start music. Cues stop playing.
+If music was already playing before the timer started, cues keep
+working normally. Reproduced on both iOS and Android.
+
+Root cause on iOS (high confidence, from reading
+`IosAudioCuePlayerFactory.kt` + `IosRunnerForegroundController.kt`):
+
+- Session is `.playback + .mixWithOthers`, kept alive by a silent
+  `AVAudioEngine` loop so iOS doesn't suspend the process
+  mid-workout.
+- Per-cue ducking calls `setCategory(.playback, mode, mix | duck)`
+  and resets to `mix` after a delay.
+- No subscription to `AVAudioSession.interruptionNotification` or
+  `routeChangeNotification`.
+- Every `setActive` / `setCategory` call passes `null` for the error
+  pointer — any failure is swallowed silently.
+
+When another audio app takes primary in the background, iOS fires an
+interruption. The silent engine can get stopped, the session can be
+implicitly deactivated, and the next cue's `player.play()` becomes a
+silent no-op. iOS then fully suspends the process because no audible
+output is happening. Nothing in our code detects or recovers from
+this.
+
+Android has the same shape of problem via `AudioFocus` — transient
+focus loss without a reacquire makes the next `MediaPlayer.start()`
+a silent no-op.
+
+**Fix plan:**
+1. Subscribe to `AVAudioSession.interruptionNotification`. On `.ended`
+   with `.shouldResume`, call `setActive(true)` and restart the silent
+   engine if it's stopped.
+2. Subscribe to `routeChangeNotification` — reactivate on
+   `.oldDeviceUnavailable` / `.categoryChange`.
+3. Stop toggling the session category per cue. Set
+   `.playback + .mixWithOthers + .duckOthers` once for the life of
+   the session. If the "unduck between cues" feel matters, use
+   `AVAudioPlayer.volume` envelope, not `setCategory`.
+4. Before every `player.play()`, check session state; reactivate if
+   inactive (and log that we had to).
+5. Pass real error pointers to every `setCategory` / `setActive` call.
+6. Mirror the pattern on Android — `AudioFocusRequest` with a change
+   listener, reacquire on transient loss, log on denial.
+
+**Telemetry plan (even if the fix isn't in yet, this gives
+visibility):**
+
+Sentry breadcrumbs for every audio-lifecycle event:
+- Session activation / deactivation.
+- Category change with before/after options.
+- Interruption began / ended.
+- Route change with reason code.
+- `player.play()` called → on the next runloop tick, check
+  `player.isPlaying` and record a breadcrumb with the result.
+
+Sentry errors (non-fatal) for:
+- Any `setActive(true, ...)` that returns false.
+- Any `setCategory(...)` that errors out.
+- Any `player.play()` where `player.isPlaying` is false 100 ms later
+  (the cue was requested but nothing played).
+- On Android: `AudioManager.requestAudioFocus(...)` returning anything
+  other than `AUDIOFOCUS_REQUEST_GRANTED`, or `onAudioFocusChange`
+  receiving `LOSS_TRANSIENT*` without a subsequent `GAIN`.
+
+With this, Sentry gets an issue each time the bug happens in the
+field, breadcrumbs show the sequence (background → other audio
+started → interruption → no recovery). No user reports needed.
+
+**Effort:** 1–2 days. Most time goes into the interruption + route
+change handlers and verifying the recovery across Music / Spotify /
+Podcasts / Phone call scenarios on device.
