@@ -146,17 +146,28 @@ def build_and_upload(distribute_external:, submit_to_app_store:)
   changelog = build_changelog(build_number, marketing_version)
   ipa_path = File.join(OUTPUT_DIR, OUTPUT_NAME)
 
-  external_group = ENV["TESTFLIGHT_EXTERNAL_GROUP"] || "main"
-  upload_to_testflight(
-    api_key: api_key,
-    ipa: ipa_path,
-    skip_waiting_for_build_processing: !distribute_external,
-    changelog: changelog,
-    distribute_external: distribute_external,
-    groups: distribute_external ? [external_group] : nil,
-    notify_external_testers: distribute_external,
-    reject_build_waiting_for_review: false,
-  )
+  # Rescue TestFlight upload/distribute so a fastlane↔ASC API hiccup at the
+  # last step — e.g. the "Cannot add internal group to a build" regression in
+  # fastlane#22051 — doesn't skip the App Store submission below. The binary
+  # reaches ASC before any group-assignment call, so if that's where it
+  # fails, the upload is already durable and `deliver` below can still submit
+  # the build for App Store review.
+  external_group = ENV["TESTFLIGHT_EXTERNAL_GROUP"] || "External Testers"
+  begin
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa_path,
+      skip_waiting_for_build_processing: !distribute_external,
+      changelog: changelog,
+      distribute_external: distribute_external,
+      groups: distribute_external ? [external_group] : nil,
+      notify_external_testers: distribute_external,
+      reject_build_waiting_for_review: false,
+    )
+  rescue => e
+    UI.important("upload_to_testflight raised (non-fatal): #{e.message}")
+    UI.important("If the log above shows the binary reached ASC, distribute manually via TestFlight → External Testing → '#{external_group}'. Continuing to App Store submission.")
+  end
 
   if submit_to_app_store
     deliver(

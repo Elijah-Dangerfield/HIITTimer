@@ -184,3 +184,73 @@ repeat count. Example: Round 1 (squat, push-up, plank × 3) then Round 2
 
 **Effort:** ~1 focused day. Data model + migration is rote; the time goes
 into the nested-list edit UX and the runner-screen redesign.
+
+## Release CI — further speedups beyond the DerivedData cache
+
+The DerivedData cache + `clean: false` + pre-built KMP framework already
+gets iOS release down to ~10 min on warm runs. The next layer of wins is
+about not rebuilding shared work across jobs and not rebuilding the KMP
+framework at all when Kotlin sources haven't changed.
+
+**Extract KMP framework into its own job.**
+- New job `build-framework`, runs on macOS, produces
+  `ComposeApp.xcframework` (or the single-arch `Framework` for device)
+  as a GitHub Actions artifact.
+- Keyed on a hash of `apps/compose/src/**`, `libraries/**/src/**`,
+  `features/**/src/**`, and `gradle/libs.versions.toml`. If that hash
+  matches a previous run's cached output, the job skips and the
+  artifact is reused.
+- `ios` job downloads the artifact instead of running
+  `linkReleaseFrameworkIosArm64` itself, then proceeds straight to the
+  Xcode archive. Makes iOS near-instant for pure-CI-config or pure-Swift
+  changes.
+- Complication: `embedAndSignAppleFrameworkForXcode` today is invoked
+  by an Xcode build phase that calls `./gradlew`. Would need to either
+  replace that build phase with a copy-artifact step when the
+  `PREBUILT_FRAMEWORK_PATH` env var is set, or add a conditional in the
+  phase's shell script.
+
+**Cross-runner Gradle build cache.**
+- Android (Linux) and iOS (macOS) runners don't share Gradle build cache
+  today. Tasks like `compileCommonMainKotlinMetadata`,
+  `compileKotlinCommonMain`, KSP runs on `commonMain`, and dependency
+  resolution produce platform-independent outputs that Gradle's build
+  cache could share across runners.
+- Options: (a) use `gradle/actions/setup-gradle`'s cache in a shared
+  cache key scheme keyed on `hashFiles('**/*.gradle*', 'gradle/**')`
+  across both jobs — simple, modest win; (b) stand up a remote build
+  cache (Gradle Enterprise/Develocity, or a self-hosted S3-backed
+  one). Remote build cache gives us read/write across all runners and
+  also benefits local dev, but it's operational overhead for a solo
+  project.
+- Realistic win from (a): 30–60s per run. Not transformative on its own
+  — mainly useful combined with framework extraction above so the
+  common metadata tasks the framework build needs are already cached.
+
+**Reconsider `macos-15-xlarge` when not on free tier.**
+- xlarge is 2–3× faster for iOS work but 2× the minute multiplier on
+  paid plans. On the free tier the multiplier eats allowance too fast.
+  If the project ever moves to a paid account or a public repo (where
+  macOS minutes are free-ish), revisit — iOS release could drop to
+  3–5 min.
+
+**Make release.yml idempotent / re-runnable.**
+- Today, if `upload_to_testflight` uploads the binary successfully but
+  then a subsequent step fails (group distribution, deliver, Sentry),
+  re-running the release.yml run will re-archive + re-upload. ASC
+  rejects the second upload as duplicate build number, so the retry
+  just fails.
+- Option: detect in the ios job whether a build with the current
+  `CURRENT_PROJECT_VERSION` is already in ASC, and skip the archive +
+  upload step in that case. Proceed straight to group assignment and
+  `deliver`. This turns "iOS failure" into "just re-run the job" in
+  most cases.
+
+**Frontload iOS signals before shipping Android.**
+- Android job already `needs: ios` so it can't ship alone, but iOS
+  still takes ~10 min warm / ~20 min cold before we know if there's a
+  fastlane/ASC problem. A cheap smoke test — `build_only` lane on a
+  PR-to-main or on the release-please PR — would catch icon/signing/
+  provisioning issues before the tag is cut. Effort: a small workflow
+  that builds the iOS archive without uploading, run on the
+  release-please PR so broken releases never get merged.

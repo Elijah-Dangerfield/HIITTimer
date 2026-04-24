@@ -79,7 +79,11 @@ jobs:
 
   android:
     name: Android AAB + Play submit
-    needs: resolve-tag
+    # Gate on iOS passing so a "Google shipped, Apple didn't" split can't
+    # happen again — we either release both platforms for a given tag or
+    # neither. If iOS fails, use workflow_dispatch with skip_app_store:true
+    # to retry iOS alone, or land a fix and let the next release carry it.
+    needs: [resolve-tag, ios]
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -226,7 +230,7 @@ jobs:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
-      TESTFLIGHT_EXTERNAL_GROUP: main
+      TESTFLIGHT_EXTERNAL_GROUP: External Testers
       FASTLANE_SKIP_UPDATE_CHECK: "1"
       FASTLANE_HIDE_CHANGELOG: "1"
 
