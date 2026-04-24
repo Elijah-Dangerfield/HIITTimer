@@ -11,9 +11,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		40F7AD782EEF44510057F44F /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
-		40F7AD8C2EEF45390057F44F /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
-		40F7AD8E2EEF45390057F44F /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		43650040A35ABEE2FF88A523 /* HIITTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HIITTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -55,16 +52,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		40F7AD772EEF44510057F44F /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				40F7AD782EEF44510057F44F /* DeviceActivity.framework */,
-				40F7AD8C2EEF45390057F44F /* ManagedSettings.framework */,
-				40F7AD8E2EEF45390057F44F /* ManagedSettingsUI.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		AAAD9064E8710953FC84629E /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -78,7 +65,6 @@
 			children = (
 				8D47A0AC8E5C3B530E134DF3 /* Configuration */,
 				8EEEC16658FA3E2CD3B23C1D /* iosApp */,
-				40F7AD772EEF44510057F44F /* Frameworks */,
 				AAAD9064E8710953FC84629E /* Products */,
 			);
 			sourceTree = "<group>";
