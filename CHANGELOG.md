@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.1...v1.0.2) (2026-04-24)
+
+
+### Bug Fixes
+
+* **timers:** recover from audio session interruptions in the background + add telemetry ([#36](https://github.com/Elijah-Dangerfield/HIITTimer/issues/36)) ([0aec9fd](https://github.com/Elijah-Dangerfield/HIITTimer/commit/0aec9fd7519bfbbcb08ea58715b04288ad0ea4e1))
+
 ## [1.0.1](https://github.com/Elijah-Dangerfield/HIITTimer/compare/v1.0.0...v1.0.1) (2026-04-23)
 
 
