@@ -1,5 +1,11 @@
 # Rounds
 
+[Play Store Link
+](https://play.google.com/store/apps/details?id=com.dangerfield.hiittimer.HIITTimer)
+
+[App Store Link
+](https://apps.apple.com/us/app/rounds-interval-hiit-timer/id6762529965)
+
 <img width="1024" height="500" alt="feature-graphic" src="https://github.com/user-attachments/assets/70f3b137-6f8e-4a77-94cb-ca566b7b389d" />
 
 
